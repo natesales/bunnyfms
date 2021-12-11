@@ -335,7 +335,7 @@ func listenForDriverStations() {
 			tcpConn.Close()
 			continue
 		}
-		//arena.AllianceStations[assignedStation].DsConn = dsConn
+		AllianceStations[assignedStation].DsConn = dsConn
 
 		if wrongAssignedStation != "" {
 			dsConn.WrongStation = wrongAssignedStation
@@ -354,7 +354,7 @@ func (dsConn *DriverStationConnection) handleTcpConnection() {
 		if err != nil {
 			log.Printf("Error reading from connection for Team %d: %v", dsConn.TeamId, err)
 			dsConn.close()
-			//arena.AllianceStations[dsConn.AllianceStation].DsConn = nil
+			AllianceStations[dsConn.AllianceStation].DsConn = nil
 			break
 		}
 
@@ -402,6 +402,7 @@ func (dsConn *DriverStationConnection) sendGameDataPacket(gameData string) error
 
 func sendDsPacket(matchNumber int, auto bool, enabled bool) {
 	for _, allianceStation := range AllianceStations {
+		log.Printf("Sending to %d", allianceStation.DsConn.TeamId)
 		dsConn := allianceStation.DsConn
 		if dsConn != nil {
 			dsConn.Auto = auto
@@ -413,9 +414,10 @@ func sendDsPacket(matchNumber int, auto bool, enabled bool) {
 			}
 		}
 	}
-	//lastDsPacketTime := time.Now()
 }
+
 func main() {
+	log.Println("Starting DS ticker")
 	dsPacketTicker := time.NewTicker(1000 * time.Millisecond)
 	go func() {
 		for ; true; <-dsPacketTicker.C { // Tick once at start
