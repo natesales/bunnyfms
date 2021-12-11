@@ -1,10 +1,6 @@
 let ws;
 let startTime;
 
-function estop(team) {
-    confirm(`Confirm ESTOP ${team} (${document.getElementById("r1").innerText})?`)
-}
-
 function setBanner(text) {
     document.getElementById("banner").innerText = text
 }
@@ -121,6 +117,19 @@ function stopMatch() {
     ws.send(JSON.stringify({
         message: "stop"
     }));
+}
+
+
+function estop(team) {
+    if (confirm(`Confirm ESTOP ${team} (${document.getElementById("r1").innerText})?`)) {
+        ws.send(JSON.stringify({
+            message: "estop",
+            arg: team
+        }))
+        alert("E-stopped " + team)
+    } else {
+        alert("ESTOP Cancelled")
+    }
 }
 
 function dsReconnect() {

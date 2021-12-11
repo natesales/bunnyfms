@@ -13,6 +13,7 @@ var app *fiber.App
 
 type message struct {
 	Message string `json:"message"`
+	Arg     string `json:"arg"`
 }
 
 func register() {
@@ -42,6 +43,9 @@ func register() {
 			case "ds_reconnect":
 				log.Debug("Reconnecting to driver stations")
 				driverstation.Reset()
+			case "estop":
+				log.Debugf("Estopping %s", msg.Arg)
+				// TODO
 			}
 		}
 	}))
