@@ -6,6 +6,7 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"github.com/natesales/bunnyfms/internal/api"
+	"github.com/natesales/bunnyfms/internal/driverstation"
 	"github.com/natesales/bunnyfms/internal/field"
 )
 
@@ -23,6 +24,8 @@ func main() {
 	if err := field.Setup(*autoDuration, *teleOpDuration, *endgameDuration); err != nil {
 		log.Fatal(err)
 	}
+
+	driverstation.Start()
 
 	log.Printf("Starting HTTP server on %s", *listenAddr)
 	api.Serve(*listenAddr)

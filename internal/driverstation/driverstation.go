@@ -326,6 +326,9 @@ func listenForDriverStations() {
 			tcpConn.Close()
 			continue
 		}
+		if allianceStations[assignedStation] == nil {
+			allianceStations[assignedStation] = &AllianceStation{}
+		}
 		allianceStations[assignedStation].DsConn = dsConn
 
 		if wrongAssignedStation != "" {
@@ -409,6 +412,8 @@ func sendDsPacket(matchNumber int, auto bool, enabled bool) {
 
 // Start starts drive station communication
 func Start() {
+	allianceStations = map[string]*AllianceStation{}
+
 	log.Println("Initializing driver station communication")
 	dsPacketTicker := time.NewTicker(1000 * time.Millisecond)
 	go func() {
@@ -418,7 +423,7 @@ func Start() {
 				return
 			case <-dsPacketTicker.C:
 				log.Debug("DS packet tick")
-				sendDsPacket(1000, false, false)
+				sendDsPacket(1000, true, true)
 			}
 		}
 	}()
