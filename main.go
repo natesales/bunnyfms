@@ -32,7 +32,7 @@ type AllianceStation struct {
 	//TeamID   int
 }
 
-var AllianceStations map[string]*AllianceStation
+var allianceStations map[string]*AllianceStation
 
 type DriverStationConnection struct {
 	TeamId                    int
@@ -94,7 +94,7 @@ func listenForDsUdpPackets() {
 		log.Printf("Team ID with %v", teamId)
 
 		var dsConn *DriverStationConnection
-		for _, allianceStation := range AllianceStations {
+		for _, allianceStation := range allianceStations {
 			//if allianceStation != nil { // todo  && allianceStation.Team == teamId
 			dsConn = allianceStation.DsConn
 			break
@@ -339,7 +339,7 @@ func listenForDriverStations(fmsIP string) {
 			tcpConn.Close()
 			continue
 		}
-		AllianceStations[assignedStation].DsConn = dsConn
+		allianceStations[assignedStation].DsConn = dsConn
 
 		if wrongAssignedStation != "" {
 			dsConn.WrongStation = wrongAssignedStation
@@ -358,7 +358,7 @@ func (dsConn *DriverStationConnection) handleTcpConnection() {
 		if err != nil {
 			log.Printf("Error reading from connection for Team %d: %v", dsConn.TeamId, err)
 			dsConn.close()
-			AllianceStations[dsConn.AllianceStation].DsConn = nil
+			allianceStations[dsConn.AllianceStation].DsConn = nil
 			break
 		}
 
@@ -405,7 +405,7 @@ func (dsConn *DriverStationConnection) sendGameDataPacket(gameData string) error
 }
 
 func sendDsPacket(matchNumber int, auto bool, enabled bool) {
-	for _, allianceStation := range AllianceStations {
+	for _, allianceStation := range allianceStations {
 		log.Printf("Sending to %d", allianceStation.DsConn.TeamId)
 		dsConn := allianceStation.DsConn
 		if dsConn != nil {
