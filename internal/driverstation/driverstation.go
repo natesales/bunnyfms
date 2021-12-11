@@ -143,15 +143,6 @@ func (dsConn *DriverStationConnection) close() {
 	}
 }
 
-// Called at the start of the match to allow for driver station initialization.
-func (dsConn *DriverStationConnection) signalMatchStart() error {
-	// Zero out missed packet count and begin logging.
-	dsConn.missedPacketOffset = dsConn.MissedPacketCount
-	var err error
-	//dsConn.log, err = NewTeamMatchLog(dsConn.TeamId, match)
-	return err
-}
-
 // Serializes the control information into a packet.
 func (dsConn *DriverStationConnection) encodeControlPacket(matchNumber int) [22]byte {
 	var packet [22]byte
@@ -202,9 +193,7 @@ func (dsConn *DriverStationConnection) encodeControlPacket(matchNumber int) [22]
 	packet[19] = byte(currentTime.Year() - 1900)
 
 	// Remaining number of seconds in match.
-	var matchSecondsRemaining int
-
-	matchSecondsRemaining = 15
+	matchSecondsRemaining := 15
 	//switch arena.MatchState {
 	//case PreMatch:
 	//	fallthrough
@@ -418,8 +407,8 @@ func sendDsPacket(matchNumber int, auto bool, enabled bool) {
 	}
 }
 
-// CommsStart starts drive station communication
-func CommsStart() {
+// Start starts drive station communication
+func Start() {
 	log.Println("Initializing driver station communication")
 	dsPacketTicker := time.NewTicker(1000 * time.Millisecond)
 	go func() {
@@ -457,14 +446,15 @@ func CommsStart() {
 	}()
 }
 
-// CommsStart stops drive station communication
-func CommsStop() {
+// Stop stops drive station communication
+func Stop() {
 	log.Print("Stopping driver station communication")
 	commsQuit <- true
 }
 
+// Reset forces all DS to connect
 func Reset() {
-	CommsStop()
+	Stop()
 	time.Sleep(5 * time.Second)
-	CommsStart()
+	Start()
 }

@@ -13,8 +13,6 @@ var (
 	autoStartedAt    time.Time
 	teleopStartedAt  time.Time
 	endgameStartedAt time.Time
-
-	matchAbort chan bool
 )
 
 var matchState string
