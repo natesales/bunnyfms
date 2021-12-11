@@ -40,14 +40,15 @@ function setTimers(state, autoTime, teleopTime, endgameTime) {
     }
 }
 
+function updateLatency(latency) {
+    document.getElementById("latency").innerText = latency + " ms";
+}
+
 function wsError(message) {
     document.getElementById("connection-indicator").classList.remove("bg-green")
     document.getElementById("connection-indicator").classList.add("bg-red")
+    updateLatency("-")
     setBanner("FMS backend connection lost" + (message ? ": " + message : ""))
-}
-
-function updateLatency(latency) {
-    document.getElementById("latency").innerText = latency + " ms";
 }
 
 function updateStepper(state) {
