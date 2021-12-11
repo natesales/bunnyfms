@@ -8,10 +8,6 @@ import (
 	"time"
 )
 
-var (
-	fmsIP = flag.String("ip", "10.100.0.10", "FMS IP address")
-)
-
 // FMS uses 1121 for sending UDP packets, and FMS Lite uses 1120. Using 1121
 // seems to work just fine and doesn't prompt to let FMS take control.
 const (
@@ -21,6 +17,7 @@ const (
 	driverStationTcpLinkTimeoutSec = 5
 	driverStationUdpLinkTimeoutSec = 1
 	maxTcpPacketBytes              = 4096
+	fmsIP                          = "10.0.100.5" // Hardcoded into the DS
 )
 
 type AllianceStation struct {
@@ -257,7 +254,7 @@ func (dsConn *DriverStationConnection) decodeStatusPacket(data [36]byte) {
 }
 
 // Listens for TCP connection requests to Cheesy Arena from driver stations.
-func listenForDriverStations(fmsIP string) {
+func listenForDriverStations() {
 	l, err := net.Listen("tcp", fmt.Sprintf("%s:%d", fmsIP, driverStationTcpListenPort))
 	if err != nil {
 		log.Printf("Error opening driver station TCP socket: %v", err.Error())
@@ -431,6 +428,6 @@ func main() {
 		}
 	}()
 
-	go listenForDriverStations(*fmsIP)
+	go listenForDriverStations()
 	listenForDsUdpPackets()
 }
