@@ -18,6 +18,17 @@ const (
 	maxTcpPacketBytes              = 4096
 )
 
+type AllianceStation struct {
+	DsConn   *DriverStationConnection
+	Ethernet bool
+	Astop    bool
+	Estop    bool
+	Bypass   bool
+	//TeamID   int
+}
+
+var AllianceStations map[string]*AllianceStation
+
 type DriverStationConnection struct {
 	TeamId                    int
 	AllianceStation           string
@@ -78,12 +89,12 @@ func listenForDsUdpPackets() {
 		log.Printf("Team ID with %v", teamId)
 
 		var dsConn *DriverStationConnection
-		//for _, allianceStation := range arena.AllianceStations {
-		//	if allianceStation.Team != nil && allianceStation.Team.Id == teamId {
-		//		dsConn = allianceStation.DsConn
-		//		break
-		//	}
-		//}
+		for _, allianceStation := range AllianceStations {
+			//if allianceStation != nil { // todo  && allianceStation.Team == teamId
+			dsConn = allianceStation.DsConn
+			break
+			//}
+		}
 
 		if dsConn != nil {
 			dsConn.DsLinked = true
@@ -389,10 +400,29 @@ func (dsConn *DriverStationConnection) sendGameDataPacket(gameData string) error
 	return nil
 }
 
+func sendDsPacket(matchNumber int, auto bool, enabled bool) {
+	for _, allianceStation := range AllianceStations {
+		dsConn := allianceStation.DsConn
+		if dsConn != nil {
+			dsConn.Auto = auto
+			dsConn.Enabled = enabled && !allianceStation.Estop && !allianceStation.Astop && !allianceStation.Bypass
+			dsConn.Estop = allianceStation.Estop
+			err := dsConn.update(matchNumber)
+			if err != nil {
+				log.Printf("Unable to send driver station packet for team %d", allianceStation.DsConn.TeamId)
+			}
+		}
+	}
+	//lastDsPacketTime := time.Now()
+}
 func main() {
-	// matchTimer
+	dsPacketTicker := time.NewTicker(1000 * time.Millisecond)
+	go func() {
+		for ; true; <-dsPacketTicker.C { // Tick once at start
+			sendDsPacket(1000, false, false)
+		}
+	}()
 
-	//matchNumber := 100
 	go listenForDriverStations()
 	listenForDsUdpPackets()
 }
