@@ -25,8 +25,6 @@ type AllianceStation struct {
 	Ethernet bool
 	Astop    bool
 	Estop    bool
-	Bypass   bool
-	//TeamID   int
 }
 
 var allianceStations map[string]*AllianceStation
@@ -52,11 +50,6 @@ type DriverStationConnection struct {
 	missedPacketOffset        int
 	tcpConn                   net.Conn
 	udpConn                   net.Conn
-
-	// WrongStation indicates if the team in the station is the incorrect team
-	// by being non-empty. If the team is in the correct station, or no team is
-	// connected, this is empty.
-	WrongStation string
 }
 
 var allianceStationPositionMap = map[string]byte{"R1": 0, "R2": 1, "R3": 2, "B1": 3, "B2": 4, "B3": 5}
@@ -275,36 +268,15 @@ func listenForDriverStations() {
 		}
 		teamId := int(packet[3])<<8 + int(packet[4])
 
-		// Check to see if the team is supposed to be on the field, and notify the DS accordingly.
-		//assignedStation := arena.getAssignedAllianceStation(teamId)
 		assignedStation := "R1"
-		if assignedStation == "" {
-			log.Printf("Rejecting connection from Team %d, who is not in the current match, soon.", teamId)
-			go func() {
-				// Wait a second and then close it so it doesn't chew up bandwidth constantly trying to reconnect.
-				time.Sleep(time.Second)
-				tcpConn.Close()
-			}()
-			continue
-		}
 
 		// Read the team number from the IP address to check for a station mismatch.
-		stationStatus := byte(0)
 		//teamRe := regexp.MustCompile("\\d+\\.(\\d+)\\.(\\d+)\\.")
 		//ipAddress, _, err := net.SplitHostPort(tcpConn.RemoteAddr().String())
 		//teamDigits := teamRe.FindStringSubmatch(ipAddress)
 		//teamDigit1, _ := strconv.Atoi(teamDigits[1])
 		//teamDigit2, _ := strconv.Atoi(teamDigits[2])
 		//stationTeamId := teamDigit1*100 + teamDigit2
-		wrongAssignedStation := ""
-		//if stationTeamId != teamId {
-		//	wrongAssignedStation = arena.getAssignedAllianceStation(stationTeamId)
-		//	if wrongAssignedStation != "" {
-		//		// The team is supposed to be in this match, but is plugged into the wrong station.
-		//		log.Printf("Team %d is in incorrect station %s.", teamId, wrongAssignedStation)
-		//		stationStatus = 1
-		//	}
-		//}
 
 		var assignmentPacket [5]byte
 		assignmentPacket[0] = 0  // Packet size
@@ -312,7 +284,7 @@ func listenForDriverStations() {
 		assignmentPacket[2] = 25 // Packet type
 		log.Printf("Accepting connection from Team %d in station %s.", teamId, assignedStation)
 		assignmentPacket[3] = allianceStationPositionMap[assignedStation]
-		assignmentPacket[4] = stationStatus
+		assignmentPacket[4] = byte(0)
 		_, err = tcpConn.Write(assignmentPacket[:])
 		if err != nil {
 			log.Printf("Error sending driver station assignment packet: %v", err)
@@ -330,10 +302,6 @@ func listenForDriverStations() {
 			allianceStations[assignedStation] = &AllianceStation{}
 		}
 		allianceStations[assignedStation].DsConn = dsConn
-
-		if wrongAssignedStation != "" {
-			dsConn.WrongStation = wrongAssignedStation
-		}
 
 		// Spin up a goroutine to handle further TCP communication with this driver station.
 		go dsConn.handleTcpConnection()
@@ -400,7 +368,7 @@ func sendDsPacket(matchNumber int, auto bool, enabled bool) {
 		dsConn := allianceStation.DsConn
 		if dsConn != nil {
 			dsConn.Auto = auto
-			dsConn.Enabled = enabled && !allianceStation.Estop && !allianceStation.Astop && !allianceStation.Bypass
+			dsConn.Enabled = enabled && !allianceStation.Estop && !allianceStation.Astop
 			dsConn.Estop = allianceStation.Estop
 			err := dsConn.update(matchNumber)
 			if err != nil {
@@ -459,6 +427,7 @@ func Stop() {
 
 // Reset forces all DS to connect
 func Reset() {
+	log.Debug("Resetting driver station communication")
 	Stop()
 	time.Sleep(5 * time.Second)
 	Start()

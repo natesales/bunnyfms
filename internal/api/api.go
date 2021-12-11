@@ -3,9 +3,9 @@ package api
 import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/websocket/v2"
-	"github.com/natesales/bunnyfms/internal/driverstation"
 	log "github.com/sirupsen/logrus"
 
+	"github.com/natesales/bunnyfms/internal/driverstation"
 	"github.com/natesales/bunnyfms/internal/field"
 )
 
