@@ -1,7 +1,6 @@
 package field
 
 import (
-	"fmt"
 	"io"
 	"os"
 	"path"
@@ -92,8 +91,7 @@ func formatDuration(d time.Duration) string {
 	if d < time.Microsecond {
 		return "-"
 	}
-	return fmt.Sprintf("%+v", d.Round(time.Second))
-	// TODO: Format as 0:00
+	return time.Unix(0, 0).UTC().Add(d.Round(time.Second)).Format("4:05")
 }
 
 // State gets the game state
