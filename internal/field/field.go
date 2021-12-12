@@ -23,7 +23,10 @@ var (
 	endgameStartedAt time.Time
 )
 
-var matchState, matchName, eventName string
+var (
+	gameSounds                       bool
+	matchState, matchName, eventName string
+)
 
 const (
 	stateIdle    = "Idle"
@@ -34,6 +37,11 @@ const (
 
 // playSound plays a game sound file
 func playSound(file string) {
+	if !gameSounds {
+		log.Warnf("Game sounds disabled, not playing %s", file)
+		return
+	}
+
 	f, err := os.Open(path.Join("sounds/", file))
 	if err != nil {
 		log.Warn(err)
@@ -60,7 +68,7 @@ func playSound(file string) {
 }
 
 // Setup creates a new field setup (once per event)
-func Setup(auto, teleop, endGame, event string) error {
+func Setup(auto, teleop, endGame, event string, sounds bool) error {
 	// Parse durations
 	var err error
 	autoDuration, err = time.ParseDuration(auto)
@@ -78,6 +86,9 @@ func Setup(auto, teleop, endGame, event string) error {
 
 	eventName = event
 	matchState = stateIdle
+	gameSounds = sounds
+
+	log.Infof("Configuring FMS for %s with auto: %s, teleop: %s, endgame: %s, sounds: %v", eventName, autoDuration, teleopDuration, endgameDuration, sounds)
 
 	return nil
 }
