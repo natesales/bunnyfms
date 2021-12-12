@@ -3,8 +3,8 @@
     import FieldTeam from "./components/FieldTeam.svelte";
     import Dot from "./components/Dot.svelte";
 
-    // let wsServer = "ws://" + location.host + "/ws";
-    let wsServer = "ws://localhost:8080/ws";
+    let wsServer = "ws://" + location.host + "/ws";
+    // let wsServer = "ws://localhost:8080/ws";
 
     let ws;
     let startTime;
