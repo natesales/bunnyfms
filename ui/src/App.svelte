@@ -18,6 +18,7 @@
     let editingTeamNumbers = false;
     let editingMatchName = false;
     let matchName;
+    let readyToStart = false;
 
     // https://stackoverflow.com/questions/5072136/javascript-filter-for-objects/37616104
     Object.filter = (obj, predicate) =>
@@ -52,25 +53,38 @@
             latency = Date.now() - startTime;
             matchState = JSON.parse(event.data)
             if (matchState["state"] === "Idle") {
+                readyToStart = false;
 
-                // Check if all configured teams' drive stations have connected
-                let waitingFor = []
+                // Check if each alliance has at least one team and all configured teams' drive stations have connected
+                let hasRed = false;
+                let hasBlue = false;
+                let waitingFor = [];
                 for (let position in matchState["alliances"]) {
                     let teamNumber = matchState["alliances"][position]
                     if (teamNumber > 0) {
+                        if (position.startsWith("R")) {
+                            hasRed = true
+                        } else if (position.startsWith("B")) {
+                            hasBlue = true
+                        }
                         if (!matchState["ds"] || !matchState["ds"][position]) {
                             waitingFor.push(teamNumber)
                         }
                     }
                 }
 
-                if (waitingFor.length === 0) {
-                    banner = "Ready to start match"
-                } else {
+                if (!(hasRed && hasBlue)) {
+                    banner = "Ready to configure match"
+                } else if (waitingFor.length !== 0) {
                     banner = "Waiting for " + waitingFor.length + " team"
                     if (waitingFor.length > 1) {
                         banner += "s"
                     }
+                } else if (matchName === "") {
+                    banner = "Please set a match name"
+                } else {
+                    banner = "Ready to start match"
+                    readyToStart = true
                 }
 
                 if (!editingTeamNumbers) {
@@ -204,7 +218,7 @@
                 </div>
 
                 {#if matchState['state'] === "Idle"}
-                    <button on:click={() => startMatch()}>Start Match</button>
+                    <button disabled={!readyToStart} on:click={() => startMatch()}>Start Match</button>
                 {:else}
                     <button on:click={() => stopMatch()}>Stop Match</button>
                 {/if}
