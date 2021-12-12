@@ -20,6 +20,11 @@ const (
 	fmsIP                          = "10.0.100.5" // Hardcoded into the DS
 )
 
+var (
+	udpConn     *net.UDPConn
+	tcpListener net.Listener
+)
+
 type AllianceStation struct {
 	Team   int  // Team number
 	Estop  bool // Should the robot be e-stopped?
@@ -71,15 +76,16 @@ func newConn(teamId int, allianceStation string, tcpConn net.Conn) (*Conn, error
 // Loops indefinitely to read packets and update connection status.
 func listenForDsUdpPackets() {
 	udpAddress, _ := net.ResolveUDPAddr("udp4", fmt.Sprintf(":%d", driverStationUdpReceivePort))
-	listener, err := net.ListenUDP("udp4", udpAddress)
+	var err error
+	udpConn, err = net.ListenUDP("udp4", udpAddress)
 	if err != nil {
-		log.Fatalf("Error opening driver station UDP socket: %v", err)
+		log.Warnf("Error opening driver station UDP socket: %v", err)
 	}
 	log.Printf("Listening for driver stations on UDP port %d\n", driverStationUdpReceivePort)
 
 	var data [50]byte
 	for {
-		listener.Read(data[:])
+		udpConn.Read(data[:])
 
 		teamId := int(data[4])<<8 + int(data[5])
 		if teamId == 0 {
@@ -244,21 +250,25 @@ func (dsConn *Conn) decodeStatusPacket(data [36]byte) {
 
 // Listens for TCP connection requests to Cheesy Arena from driver stations.
 func listenForDriverStations() {
-	l, err := net.Listen("tcp", fmt.Sprintf("%s:%d", fmsIP, driverStationTcpListenPort))
+	var err error
+	tcpListener, err = net.Listen("tcp", fmt.Sprintf("%s:%d", fmsIP, driverStationTcpListenPort))
 	if err != nil {
-		log.Fatalf("Error opening driver station TCP socket: %v", err)
+		log.Warnf("Error opening driver station TCP socket: %v", err)
 	}
-	defer l.Close()
+	defer tcpListener.Close()
 
 	log.Printf("Listening for driver stations on TCP port %d\n", driverStationTcpListenPort)
 	for {
-		tcpConn, err := l.Accept()
+		tcpConn, err := tcpListener.Accept()
 		if err != nil {
-			log.Fatal("Error accepting driver station connection: %v", err)
+			log.Warnf("Error accepting driver station connection: %v", err)
 		}
 
 		// Read the team number back and start tracking the driver station.
 		var packet [5]byte
+		if tcpConn == nil {
+			continue
+		}
 		_, err = tcpConn.Read(packet[:])
 		if err != nil {
 			log.Println("Error reading initial packet: ", err.Error())
@@ -367,27 +377,27 @@ func (dsConn *Conn) handleTcpConnection() {
 }
 
 // Sends a TCP packet containing the given game data to the driver station.
-func (dsConn *Conn) sendGameDataPacket(gameData string) error {
-	byteData := []byte(gameData)
-	size := len(byteData)
-	packet := make([]byte, size+4)
-
-	packet[0] = 0              // Packet size
-	packet[1] = byte(size + 2) // Packet size
-	packet[2] = 28             // Packet type
-	packet[3] = byte(size)     // Data size
-
-	// Fill the rest of the packet with the data.
-	for i, character := range byteData {
-		packet[i+4] = character
-	}
-
-	if dsConn.tcpConn != nil {
-		_, err := dsConn.tcpConn.Write(packet)
-		return err
-	}
-	return nil
-}
+//func (dsConn *Conn) sendGameDataPacket(gameData string) error {
+//	byteData := []byte(gameData)
+//	size := len(byteData)
+//	packet := make([]byte, size+4)
+//
+//	packet[0] = 0              // Packet size
+//	packet[1] = byte(size + 2) // Packet size
+//	packet[2] = 28             // Packet type
+//	packet[3] = byte(size)     // Data size
+//
+//	// Fill the rest of the packet with the data.
+//	for i, character := range byteData {
+//		packet[i+4] = character
+//	}
+//
+//	if dsConn.tcpConn != nil {
+//		_, err := dsConn.tcpConn.Write(packet)
+//		return err
+//	}
+//	return nil
+//}
 
 func sendDsPacket(matchNumber int, auto bool, enabled bool) {
 	for _, allianceStation := range AllianceStations {
@@ -410,7 +420,9 @@ func sendDsPacket(matchNumber int, auto bool, enabled bool) {
 
 // Start starts drive station communication
 func Start() {
-	AllianceStations = map[string]*AllianceStation{}
+	if AllianceStations == nil {
+		AllianceStations = map[string]*AllianceStation{}
+	}
 
 	log.Println("Initializing driver station communication")
 	dsPacketTicker := time.NewTicker(1000 * time.Millisecond)
@@ -453,6 +465,8 @@ func Start() {
 func Stop() {
 	log.Print("Stopping driver station communication")
 	commsQuit <- true
+	tcpListener.Close()
+	udpConn.Close()
 }
 
 // Reset forces all DS to connect
@@ -483,7 +497,7 @@ type DSStats struct {
 }
 
 func roundTime(t time.Time) string {
-	delta := time.Now().Sub(t).Round(time.Millisecond)
+	delta := time.Since(t).Round(time.Millisecond)
 	if delta < time.Microsecond || delta > 24*time.Hour {
 		return "-"
 	}
