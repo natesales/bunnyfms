@@ -46,6 +46,9 @@ func register() {
 			case "estop":
 				log.Debugf("Estopping %s", msg.Arg)
 				// TODO
+			case "test_sounds":
+				log.Debug("Playing all sounds")
+				field.PlayAllSounds()
 			}
 		}
 	}))
@@ -54,7 +57,6 @@ func register() {
 // Serve starts the API server
 func Serve(listenAddr string) {
 	if app == nil {
-		log.Debug("Registering application handlers")
 		register()
 	}
 	log.Fatal(app.Listen(listenAddr))
