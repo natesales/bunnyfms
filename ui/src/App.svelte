@@ -316,7 +316,7 @@
         margin-bottom: 5px;
     }
 
-    .space-between p, h1, h2 {
+    .space-between p, h2 {
         margin: 0;
         padding: 0;
     }
