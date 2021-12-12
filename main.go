@@ -15,13 +15,14 @@ var (
 	autoDuration    = flag.String("auto-duration", "10s", "Auto duration")
 	teleOpDuration  = flag.String("teleop-duration", "2m20s", "Telop duration")
 	endgameDuration = flag.String("endgame-duration", "10s", "Endgame duration")
+	eventName       = flag.String("event-name", "", "Event name")
 )
 
 func main() {
 	flag.Parse()
 	log.SetLevel(log.DebugLevel)
 
-	if err := field.Setup(*autoDuration, *teleOpDuration, *endgameDuration); err != nil {
+	if err := field.Setup(*autoDuration, *teleOpDuration, *endgameDuration, *eventName); err != nil {
 		log.Fatal(err)
 	}
 

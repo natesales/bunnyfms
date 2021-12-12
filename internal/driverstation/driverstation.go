@@ -21,17 +21,16 @@ const (
 )
 
 type AllianceStation struct {
-	DsConn   *DriverStationConnection
-	Ethernet bool
-	Astop    bool
-	Estop    bool
+	Team   int  // Team number
+	Estop  bool // Should the robot be e-stopped?
+	DsConn *Conn
 }
 
-var allianceStations map[string]*AllianceStation
+var AllianceStations map[string]*AllianceStation
 
 var commsQuit = make(chan bool)
 
-type DriverStationConnection struct {
+type Conn struct {
 	TeamId                    int
 	AllianceStation           string
 	Auto                      bool
@@ -55,7 +54,7 @@ type DriverStationConnection struct {
 var allianceStationPositionMap = map[string]byte{"R1": 0, "R2": 1, "R3": 2, "B1": 3, "B2": 4, "B3": 5}
 
 // Opens a UDP connection for communicating to the driver station.
-func newDriverStationConnection(teamId int, allianceStation string, tcpConn net.Conn) (*DriverStationConnection, error) {
+func newConn(teamId int, allianceStation string, tcpConn net.Conn) (*Conn, error) {
 	ipAddress, _, err := net.SplitHostPort(tcpConn.RemoteAddr().String())
 	if err != nil {
 		return nil, err
@@ -66,7 +65,7 @@ func newDriverStationConnection(teamId int, allianceStation string, tcpConn net.
 	if err != nil {
 		return nil, err
 	}
-	return &DriverStationConnection{TeamId: teamId, AllianceStation: allianceStation, tcpConn: tcpConn, udpConn: udpConn}, nil
+	return &Conn{TeamId: teamId, AllianceStation: allianceStation, tcpConn: tcpConn, udpConn: udpConn}, nil
 }
 
 // Loops indefinitely to read packets and update connection status.
@@ -83,14 +82,20 @@ func listenForDsUdpPackets() {
 		listener.Read(data[:])
 
 		teamId := int(data[4])<<8 + int(data[5])
-		log.Printf("Team ID with %v", teamId)
+		if teamId == 0 {
+			log.Debug("Ignoring packet from team 0")
+			continue
+		}
+		log.Debugf("Packet from team %d", teamId)
 
-		var dsConn *DriverStationConnection
-		for _, allianceStation := range allianceStations {
-			//if allianceStation != nil { // todo  && allianceStation.Team == teamId
-			dsConn = allianceStation.DsConn
-			break
-			//}
+		// Assign connection if it doesn't already exist
+		var dsConn *Conn
+		for _, allianceStation := range AllianceStations {
+			if allianceStation != nil && allianceStation.Team == teamId {
+				log.Debugf("Assigned driver station connection to team %d", teamId)
+				dsConn = allianceStation.DsConn
+				break
+			}
 		}
 
 		if dsConn != nil {
@@ -110,7 +115,7 @@ func listenForDsUdpPackets() {
 }
 
 // Sends a control packet to the Driver Station and checks for timeout conditions.
-func (dsConn *DriverStationConnection) update(matchNumber int) error {
+func (dsConn *Conn) update(matchNumber int) error {
 	err := dsConn.sendControlPacket(matchNumber)
 	if err != nil {
 		return err
@@ -127,7 +132,7 @@ func (dsConn *DriverStationConnection) update(matchNumber int) error {
 	return nil
 }
 
-func (dsConn *DriverStationConnection) close() {
+func (dsConn *Conn) close() {
 	if dsConn.udpConn != nil {
 		dsConn.udpConn.Close()
 	}
@@ -137,7 +142,7 @@ func (dsConn *DriverStationConnection) close() {
 }
 
 // Serializes the control information into a packet.
-func (dsConn *DriverStationConnection) encodeControlPacket(matchNumber int) [22]byte {
+func (dsConn *Conn) encodeControlPacket(matchNumber int) [22]byte {
 	var packet [22]byte
 
 	// Packet number, stored big-endian in two bytes.
@@ -216,7 +221,7 @@ func (dsConn *DriverStationConnection) encodeControlPacket(matchNumber int) [22]
 }
 
 // Builds and sends the next control packet to the Driver Station.
-func (dsConn *DriverStationConnection) sendControlPacket(matchNumber int) error {
+func (dsConn *Conn) sendControlPacket(matchNumber int) error {
 	packet := dsConn.encodeControlPacket(matchNumber)
 	if dsConn.udpConn != nil {
 		_, err := dsConn.udpConn.Write(packet[:])
@@ -229,7 +234,7 @@ func (dsConn *DriverStationConnection) sendControlPacket(matchNumber int) error 
 }
 
 // Deserializes a packet from the DS into a structure representing the DS/robot status.
-func (dsConn *DriverStationConnection) decodeStatusPacket(data [36]byte) {
+func (dsConn *Conn) decodeStatusPacket(data [36]byte) {
 	// Average DS-robot trip time in milliseconds.
 	dsConn.DsRobotTripTimeMs = int(data[1]) / 2
 
@@ -241,8 +246,7 @@ func (dsConn *DriverStationConnection) decodeStatusPacket(data [36]byte) {
 func listenForDriverStations() {
 	l, err := net.Listen("tcp", fmt.Sprintf("%s:%d", fmsIP, driverStationTcpListenPort))
 	if err != nil {
-		log.Printf("Error opening driver station TCP socket: %v", err.Error())
-		return
+		log.Fatalf("Error opening driver station TCP socket: %v", err)
 	}
 	defer l.Close()
 
@@ -250,8 +254,7 @@ func listenForDriverStations() {
 	for {
 		tcpConn, err := l.Accept()
 		if err != nil {
-			log.Println("Error accepting driver station connection: ", err.Error())
-			continue
+			log.Fatal("Error accepting driver station connection: %v", err)
 		}
 
 		// Read the team number back and start tracking the driver station.
@@ -268,15 +271,32 @@ func listenForDriverStations() {
 		}
 		teamId := int(packet[3])<<8 + int(packet[4])
 
-		assignedStation := "R1"
+		// Check if the
+		var assignedStation string
+		for position, allianceStation := range AllianceStations {
+			if allianceStation.Team == teamId {
+				assignedStation = position
+				break
+			}
+		}
+		if assignedStation == "" {
+			log.Warnf("Team %d shouldn't be on the field", teamId)
+			go func() {
+				// Wait a second and then close it so it doesn't chew up bandwidth constantly trying to reconnect.
+				time.Sleep(time.Second)
+				tcpConn.Close()
+			}()
+			continue
+		}
 
-		// Read the team number from the IP address to check for a station mismatch.
+		//// Read the team number from the IP address to check for a station mismatch.
 		//teamRe := regexp.MustCompile("\\d+\\.(\\d+)\\.(\\d+)\\.")
 		//ipAddress, _, err := net.SplitHostPort(tcpConn.RemoteAddr().String())
 		//teamDigits := teamRe.FindStringSubmatch(ipAddress)
 		//teamDigit1, _ := strconv.Atoi(teamDigits[1])
 		//teamDigit2, _ := strconv.Atoi(teamDigits[2])
 		//stationTeamId := teamDigit1*100 + teamDigit2
+		//log.Infof("Team %d has IP %d", teamId, stationTeamId)
 
 		var assignmentPacket [5]byte
 		assignmentPacket[0] = 0  // Packet size
@@ -284,7 +304,12 @@ func listenForDriverStations() {
 		assignmentPacket[2] = 25 // Packet type
 		log.Printf("Accepting connection from Team %d in station %s.", teamId, assignedStation)
 		assignmentPacket[3] = allianceStationPositionMap[assignedStation]
-		assignmentPacket[4] = byte(0)
+		wrongStation := false
+		if wrongStation {
+			assignmentPacket[4] = 1
+		} else {
+			assignmentPacket[4] = 0
+		}
 		_, err = tcpConn.Write(assignmentPacket[:])
 		if err != nil {
 			log.Printf("Error sending driver station assignment packet: %v", err)
@@ -292,23 +317,23 @@ func listenForDriverStations() {
 			continue
 		}
 
-		dsConn, err := newDriverStationConnection(teamId, assignedStation, tcpConn)
+		dsConn, err := newConn(teamId, assignedStation, tcpConn)
 		if err != nil {
 			log.Printf("Error registering driver station connection: %v", err)
 			tcpConn.Close()
 			continue
 		}
-		if allianceStations[assignedStation] == nil {
-			allianceStations[assignedStation] = &AllianceStation{}
+		if AllianceStations[assignedStation] == nil {
+			AllianceStations[assignedStation] = &AllianceStation{}
 		}
-		allianceStations[assignedStation].DsConn = dsConn
+		AllianceStations[assignedStation].DsConn = dsConn
 
 		// Spin up a goroutine to handle further TCP communication with this driver station.
 		go dsConn.handleTcpConnection()
 	}
 }
 
-func (dsConn *DriverStationConnection) handleTcpConnection() {
+func (dsConn *Conn) handleTcpConnection() {
 	buffer := make([]byte, maxTcpPacketBytes)
 	for {
 		dsConn.tcpConn.SetReadDeadline(time.Now().Add(time.Second * driverStationTcpLinkTimeoutSec))
@@ -316,7 +341,9 @@ func (dsConn *DriverStationConnection) handleTcpConnection() {
 		if err != nil {
 			log.Printf("Error reading from connection for Team %d: %v", dsConn.TeamId, err)
 			dsConn.close()
-			allianceStations[dsConn.AllianceStation].DsConn = nil
+			if AllianceStations[dsConn.AllianceStation] != nil {
+				AllianceStations[dsConn.AllianceStation].DsConn = nil
+			}
 			break
 		}
 
@@ -340,7 +367,7 @@ func (dsConn *DriverStationConnection) handleTcpConnection() {
 }
 
 // Sends a TCP packet containing the given game data to the driver station.
-func (dsConn *DriverStationConnection) sendGameDataPacket(gameData string) error {
+func (dsConn *Conn) sendGameDataPacket(gameData string) error {
 	byteData := []byte(gameData)
 	size := len(byteData)
 	packet := make([]byte, size+4)
@@ -363,12 +390,15 @@ func (dsConn *DriverStationConnection) sendGameDataPacket(gameData string) error
 }
 
 func sendDsPacket(matchNumber int, auto bool, enabled bool) {
-	for _, allianceStation := range allianceStations {
+	for _, allianceStation := range AllianceStations {
+		if allianceStation.DsConn == nil {
+			continue // DS hasn't been picked up by the FMS yet
+		}
 		log.Printf("Sending to %d", allianceStation.DsConn.TeamId)
 		dsConn := allianceStation.DsConn
 		if dsConn != nil {
 			dsConn.Auto = auto
-			dsConn.Enabled = enabled && !allianceStation.Estop && !allianceStation.Astop
+			dsConn.Enabled = enabled && !allianceStation.Estop
 			dsConn.Estop = allianceStation.Estop
 			err := dsConn.update(matchNumber)
 			if err != nil {
@@ -380,7 +410,7 @@ func sendDsPacket(matchNumber int, auto bool, enabled bool) {
 
 // Start starts drive station communication
 func Start() {
-	allianceStations = map[string]*AllianceStation{}
+	AllianceStations = map[string]*AllianceStation{}
 
 	log.Println("Initializing driver station communication")
 	dsPacketTicker := time.NewTicker(1000 * time.Millisecond)
@@ -431,4 +461,54 @@ func Reset() {
 	Stop()
 	time.Sleep(5 * time.Second)
 	Start()
+}
+
+// CloseAll closes all connections
+func CloseAll() {
+	for _, allianceStation := range AllianceStations {
+		if allianceStation.DsConn != nil {
+			allianceStation.DsConn.udpConn.Close()
+			allianceStation.DsConn.tcpConn.Close()
+		}
+	}
+}
+
+type DSStats struct {
+	LastPacket     string  `json:"last_packet"`
+	LastRobotLink  string  `json:"last_robot_link"`
+	BatteryVoltage float64 `json:"battery_voltage"`
+	DSLink         bool    `json:"ds_link"`
+	RobotLink      bool    `json:"robot_link"`
+	RadioLink      bool    `json:"radio_link"`
+}
+
+func roundTime(t time.Time) string {
+	delta := time.Now().Sub(t).Round(time.Millisecond)
+	if delta < time.Microsecond || delta > 24*time.Hour {
+		return "-"
+	}
+	return fmt.Sprintf("%v", delta)
+}
+
+// ConnectionStats gets a map of alliance station to connection stats
+func ConnectionStats() map[string]*DSStats {
+	o := map[string]*DSStats{}
+
+	if AllianceStations != nil {
+		log.Infof("%d alliance stations", len(AllianceStations))
+		for position, allianceStation := range AllianceStations {
+			if allianceStation.DsConn != nil {
+				o[position] = &DSStats{
+					LastPacket:     roundTime(allianceStation.DsConn.lastPacketTime),
+					LastRobotLink:  roundTime(allianceStation.DsConn.lastRobotLinkedTime),
+					BatteryVoltage: allianceStation.DsConn.BatteryVoltage,
+					DSLink:         allianceStation.DsConn.DsLinked,
+					RobotLink:      allianceStation.DsConn.RobotLinked,
+					RadioLink:      allianceStation.DsConn.RadioLinked,
+				}
+			}
+		}
+	}
+
+	return o
 }

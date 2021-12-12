@@ -52,7 +52,27 @@
             latency = Date.now() - startTime;
             matchState = JSON.parse(event.data)
             if (matchState["state"] === "Idle") {
-                banner = "Ready to start match"
+
+                // Check if all configured teams' drive stations have connected
+                let waitingFor = []
+                for (let position in matchState["alliances"]) {
+                    let teamNumber = matchState["alliances"][position]
+                    if (teamNumber > 0) {
+                        if (!matchState["ds"] || !matchState["ds"][position]) {
+                            waitingFor.push(teamNumber)
+                        }
+                    }
+                }
+
+                if (waitingFor.length === 0) {
+                    banner = "Ready to start match"
+                } else {
+                    banner = "Waiting for " + waitingFor.length + " team"
+                    if (waitingFor.length > 1) {
+                        banner += "s"
+                    }
+                }
+
                 if (!editingTeamNumbers) {
                     allianceMap = Object.filter(matchState["alliances"], x => (x && x !== 0))
                 }
@@ -152,9 +172,9 @@
     </div>
     <div class="field">
         <div class="alliance">
-            <FieldTeam allianceStation="R1" bind:teamNumber={allianceMap["R1"]} {editTeamNumbers} {estop} matchIdle={!matchState['state'] || matchState['state'] === "Idle"} {updateAlliances}/>
-            <FieldTeam allianceStation="R2" bind:teamNumber={allianceMap["R2"]} {editTeamNumbers} {estop} matchIdle={!matchState['state'] || matchState['state'] === "Idle"} {updateAlliances}/>
-            <FieldTeam allianceStation="R3" bind:teamNumber={allianceMap["R3"]} {editTeamNumbers} {estop} matchIdle={!matchState['state'] || matchState['state'] === "Idle"} {updateAlliances}/>
+            <FieldTeam allianceStation="R1" bind:matchState={matchState} bind:teamNumber={allianceMap["R1"]} {editTeamNumbers} {estop} {updateAlliances}/>
+            <FieldTeam allianceStation="R2" bind:matchState={matchState} bind:teamNumber={allianceMap["R2"]} {editTeamNumbers} {estop} {updateAlliances}/>
+            <FieldTeam allianceStation="R3" bind:matchState={matchState} bind:teamNumber={allianceMap["R3"]} {editTeamNumbers} {estop} {updateAlliances}/>
         </div>
 
         <div class="match-center">
@@ -192,9 +212,9 @@
         </div>
 
         <div class="alliance text-align-right">
-            <FieldTeam allianceStation="B1" bind:teamNumber={allianceMap["B1"]} {editTeamNumbers} {estop} matchIdle={!matchState['state'] || matchState['state'] === "Idle"} {updateAlliances}/>
-            <FieldTeam allianceStation="B2" bind:teamNumber={allianceMap["B2"]} {editTeamNumbers} {estop} matchIdle={!matchState['state'] || matchState['state'] === "Idle"} {updateAlliances}/>
-            <FieldTeam allianceStation="B3" bind:teamNumber={allianceMap["B3"]} {editTeamNumbers} {estop} matchIdle={!matchState['state'] || matchState['state'] === "Idle"} {updateAlliances}/>
+            <FieldTeam allianceStation="B1" bind:matchState={matchState} bind:teamNumber={allianceMap["B1"]} {editTeamNumbers} {estop} {updateAlliances}/>
+            <FieldTeam allianceStation="B2" bind:matchState={matchState} bind:teamNumber={allianceMap["B2"]} {editTeamNumbers} {estop} {updateAlliances}/>
+            <FieldTeam allianceStation="B3" bind:matchState={matchState} bind:teamNumber={allianceMap["B3"]} {editTeamNumbers} {estop} {updateAlliances}/>
         </div>
     </div>
 

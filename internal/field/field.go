@@ -9,12 +9,9 @@ import (
 	"github.com/hajimehoshi/go-mp3"
 	"github.com/hajimehoshi/oto"
 	log "github.com/sirupsen/logrus"
-)
 
-type AllianceStation struct {
-	Position string // R1, B1, etc
-	Team     int    // Team number
-}
+	"github.com/natesales/bunnyfms/internal/driverstation"
+)
 
 var (
 	autoDuration    time.Duration
@@ -24,8 +21,6 @@ var (
 	autoStartedAt    time.Time
 	teleopStartedAt  time.Time
 	endgameStartedAt time.Time
-
-	AllianceStations map[string]*AllianceStation
 )
 
 var matchState, matchName, eventName string
@@ -103,6 +98,7 @@ func State() map[string]interface{} {
 		"state":      matchState,
 		"alliances":  TeamNumbers(),
 		"event_name": eventName,
+		"ds":         driverstation.ConnectionStats(),
 	}
 
 	if matchState == "Idle" {
@@ -157,23 +153,23 @@ func PlayAllSounds() {
 
 // UpdateTeamNumbers updates all alliance station team numbers
 func UpdateTeamNumbers(alliances map[string]int) {
-	if AllianceStations == nil {
-		AllianceStations = map[string]*AllianceStation{}
+	if driverstation.AllianceStations == nil {
+		driverstation.AllianceStations = map[string]*driverstation.AllianceStation{}
 	}
 
 	for position, team := range alliances {
-		if AllianceStations[position] == nil {
-			AllianceStations[position] = &AllianceStation{Team: team}
+		if driverstation.AllianceStations[position] == nil {
+			driverstation.AllianceStations[position] = &driverstation.AllianceStation{Team: team}
 		} else {
-			AllianceStations[position].Team = team
+			driverstation.AllianceStations[position].Team = team
 		}
 	}
 }
 
 // TeamNumbers gets a map of alliance station position to team number
 func TeamNumbers() map[string]int {
-	var o = make(map[string]int, len(AllianceStations))
-	for position, allianceStation := range AllianceStations {
+	var o = make(map[string]int, len(driverstation.AllianceStations))
+	for position, allianceStation := range driverstation.AllianceStations {
 		o[position] = allianceStation.Team
 	}
 	return o
@@ -186,5 +182,6 @@ func UpdateMatchName(n string) {
 
 // ResetAlliances clears all alliance stations
 func ResetAlliances() {
-	AllianceStations = map[string]*AllianceStation{}
+	driverstation.CloseAll()
+	driverstation.AllianceStations = map[string]*driverstation.AllianceStation{}
 }
