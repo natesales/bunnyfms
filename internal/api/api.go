@@ -15,6 +15,7 @@ type message struct {
 	Message         string         `json:"message"`
 	AllianceStation string         `json:"alliance_station"`
 	Alliances       map[string]int `json:"alliances"`
+	Name            string         `json:"name"`
 }
 
 func register() {
@@ -53,6 +54,12 @@ func register() {
 			case "update_alliances":
 				log.Debugf("Updating alliances to %+v", msg.Alliances)
 				field.UpdateTeamNumbers(msg.Alliances)
+			case "match_name":
+				log.Debugf("Updating match name to %+v", msg.Name)
+				field.UpdateMatchName(msg.Name)
+			case "reset_alliances":
+				log.Debug("Resetting alliances")
+				field.ResetAlliances()
 			}
 		}
 	}))

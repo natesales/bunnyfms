@@ -16,6 +16,8 @@
     let banner = "Waiting for FMS connection";
     let allianceMap = {};
     let editingTeamNumbers = false;
+    let editingMatchName = false;
+    let matchName;
 
     // https://stackoverflow.com/questions/5072136/javascript-filter-for-objects/37616104
     Object.filter = (obj, predicate) =>
@@ -36,7 +38,7 @@
         }
         ws.onclose = () => {
             wsConnected = false
-            banner = "Retrying FMS connection..."
+            banner = "Lost FMS connection"
             setTimeout(function () {
                 wsConnect()
             }, 1000)
@@ -53,6 +55,9 @@
                 banner = "Ready to start match"
                 if (!editingTeamNumbers) {
                     allianceMap = Object.filter(matchState["alliances"], x => (x && x !== 0))
+                }
+                if (!editingMatchName) {
+                    matchName = matchState["name"]
                 }
             } else { // Match running
                 banner = "Running: " + matchState["state"]
@@ -72,9 +77,25 @@
     }
 
     function testSounds() {
-        ws.send(JSON.stringify({
-            message: "test_sounds"
-        }))
+        if (confirm("Are you sure you want to test game sounds?")) {
+            ws.send(JSON.stringify({
+                message: "test_sounds"
+            }))
+            alert("Playing game sounds")
+        } else {
+            alert("Game sound test cancelled")
+        }
+    }
+
+    function resetAlliances() {
+        if (confirm("Are you sure you want to reset alliances?")) {
+            ws.send(JSON.stringify({
+                message: "reset_alliances"
+            }))
+            alert("Alliances reset")
+        } else {
+            alert("Alliance reset cancelled")
+        }
     }
 
     function estop(teamNumber, allianceStation) {
@@ -123,8 +144,12 @@
 </script>
 
 <main>
-    <h1>BunnyFMS</h1>
-
+    <div class="space-between">
+        <h2>BunnyFMS</h2>
+        {#if matchState["event_name"]}
+            <h2>{matchState["event_name"]}</h2>
+        {/if}
+    </div>
     <div class="field">
         <div class="alliance">
             <FieldTeam allianceStation="R1" bind:teamNumber={allianceMap["R1"]} {editTeamNumbers} {estop} matchIdle={!matchState['state'] || matchState['state'] === "Idle"} {updateAlliances}/>
@@ -133,9 +158,24 @@
         </div>
 
         <div class="match-center">
-            <h2>{banner}</h2>
+            <h2 style="margin-bottom: 10px">{banner}</h2>
 
             {#if matchState['state']}
+                <input
+                        placeholder="Match name"
+                        style="text-align: center"
+                        type="text"
+                        disabled={matchState["state"] !== "Idle"}
+                        bind:value={matchName}
+                        on:focus={() => editingMatchName=true}
+                        on:blur={() => {
+                            ws.send(JSON.stringify({
+                                message: "match_name",
+                                name: matchName
+                            }))
+                            editingMatchName=false
+                        }}
+                >
                 <h2 style="margin-bottom: 0">{matchState["current_timer"]}</h2>
                 <div class="match-timers">
                     <p>Auto: {matchState["auto_timer"]}</p>
@@ -158,7 +198,7 @@
         </div>
     </div>
 
-    <div class="footer">
+    <div class="space-between">
         <p on:click={() => {hideFTATools = !hideFTATools}}>FTA Tools ▼</p>
         <p class="fms-dot">
             FMS:
@@ -171,6 +211,7 @@
             <button on:click={() => wsConnect()}>WS Refresh</button>
             <button on:click={() => dsReconnect()}>Force DS Reconnect</button>
             <button on:click={() => testSounds()}>Test game sounds</button>
+            <button on:click={() => resetAlliances()}>Reset alliances</button>
         </div>
     {/if}
 </main>
@@ -233,14 +274,15 @@
         margin-bottom: 2px;
     }
 
-    .footer {
+    .space-between {
         display: flex;
         flex-direction: row;
         justify-content: space-between;
         align-items: center;
+        margin-bottom: 5px;
     }
 
-    .footer p {
+    .space-between p, h1, h2 {
         margin: 0;
         padding: 0;
     }

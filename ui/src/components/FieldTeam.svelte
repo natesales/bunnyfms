@@ -5,35 +5,24 @@
     export let matchIdle = false;
     export let allianceStation, teamNumber;
 
-    let rightAlign = allianceStation.startsWith('B');
+    let isBlueAlliance = allianceStation.startsWith('B');
 </script>
 
 <main>
-    <div class="row" class:align-right={rightAlign}>
-        {#if rightAlign}
-            <h2 class:align-right={rightAlign} style="color: {allianceStation.startsWith('R') ?'red' : 'blue'}">
-                {allianceStation}
-            </h2>
-        {/if}
-        <input
-                bind:value={teamNumber}
-                class:align-right={rightAlign}
-                disabled={!matchIdle}
-                on:blur={updateAlliances}
-                on:focus={editTeamNumbers}
-                type="number"
-        >
-        {#if !rightAlign}
-            <h2 style="color: {allianceStation.startsWith('R') ?'red' : 'blue'}">
-                {allianceStation}
-            </h2>
-        {/if}
-    </div>
-    <p>
-        DS:
-        <Dot state={false}/>
-    </p>
-    <button class:align-right={allianceStation.startsWith('B')} disabled={matchIdle} on:click={() => {estop(teamNumber, allianceStation)}}>E-STOP</button>
+    <input
+            bind:value={teamNumber}
+            class:align-right={isBlueAlliance}
+            class:blue={isBlueAlliance}
+            disabled={!matchIdle}
+            on:blur={updateAlliances}
+            on:focus={editTeamNumbers}
+            type="number"
+    >
+    <!--    <p>-->
+    <!--        DS:-->
+    <!--        <Dot state={false}/>-->
+    <!--    </p>-->
+    <button class:align-right={isBlueAlliance} disabled={matchIdle} on:click={() => {estop(teamNumber, allianceStation)}}>E-STOP</button>
 </main>
 
 <style>
@@ -43,13 +32,18 @@
 
     button {
         font-weight: bold;
-        background-color: red;
+        background-color: #ee1b1b;
     }
 
     input {
         margin-top: 10px;
         margin-bottom: 10px;
-        width: 5ch;
+        width: 4ch;
+        border: 2px solid red;
+    }
+
+    .blue {
+        border: 2px solid blue;
     }
 
     /* Hide number arrows */
@@ -78,16 +72,5 @@
         margin-top: 0;
         margin-bottom: 10px;
         padding: 0;
-    }
-
-    .row {
-        display: flex;
-        flex-direction: row;
-        align-items: center;
-    }
-
-    .row h2 {
-        margin-top: 12px;
-        margin-bottom: 12px;
     }
 </style>

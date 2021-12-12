@@ -29,7 +29,7 @@ var (
 	AllianceStations map[string]*AllianceStation
 )
 
-var matchState string
+var matchState, matchName, eventName string
 
 const (
 	stateIdle    = "Idle"
@@ -66,7 +66,7 @@ func playSound(file string) {
 }
 
 // Setup creates a new field setup (once per event)
-func Setup(auto, teleop, endGame string) error {
+func Setup(auto, teleop, endGame, event string) error {
 	// Parse durations
 	var err error
 	autoDuration, err = time.ParseDuration(auto)
@@ -82,6 +82,7 @@ func Setup(auto, teleop, endGame string) error {
 		return err
 	}
 
+	eventName = event
 	matchState = stateIdle
 
 	return nil
@@ -100,8 +101,10 @@ func State() map[string]interface{} {
 	now := time.Now()
 
 	o := map[string]interface{}{
-		"state":     matchState,
-		"alliances": TeamNumbers(),
+		"name":       matchName,
+		"state":      matchState,
+		"alliances":  TeamNumbers(),
+		"event_name": eventName,
 	}
 
 	if matchState == "Idle" {
@@ -176,4 +179,14 @@ func TeamNumbers() map[string]int {
 		o[position] = allianceStation.Team
 	}
 	return o
+}
+
+// UpdateMatchName sets the match name
+func UpdateMatchName(n string) {
+	matchName = n
+}
+
+// ResetAlliances clears all alliance stations
+func ResetAlliances() {
+	AllianceStations = map[string]*AllianceStation{}
 }
