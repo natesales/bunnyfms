@@ -12,8 +12,9 @@ import (
 var app *fiber.App
 
 type message struct {
-	Message string `json:"message"`
-	Arg     string `json:"arg"`
+	Message         string         `json:"message"`
+	AllianceStation string         `json:"alliance_station"`
+	Alliances       map[string]int `json:"alliances"`
 }
 
 func register() {
@@ -44,11 +45,14 @@ func register() {
 				log.Debug("Reconnecting to driver stations")
 				driverstation.Reset()
 			case "estop":
-				log.Debugf("Estopping %s", msg.Arg)
+				log.Debugf("Estopping %s", msg.AllianceStation)
 				// TODO
 			case "test_sounds":
 				log.Debug("Playing all sounds")
 				field.PlayAllSounds()
+			case "update_alliances":
+				log.Debugf("Updating alliances to %+v", msg.Alliances)
+				field.UpdateTeamNumbers(msg.Alliances)
 			}
 		}
 	}))

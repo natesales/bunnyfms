@@ -1,7 +1,7 @@
 <script>
-    import MatchStepper from "./components/MatchStepper.svelte";
     import {onMount} from "svelte";
     import FieldTeam from "./components/FieldTeam.svelte";
+    import Dot from "./components/Dot.svelte";
 
     // let wsServer = "ws://" + location.host + "/ws";
     let wsServer = "ws://localhost:8080/ws";
@@ -14,6 +14,18 @@
     let wsConnected = false;
     let matchState = {};
     let banner = "Waiting for FMS connection";
+    let allianceMap = {};
+    let editingTeamNumbers = false;
+
+    // https://stackoverflow.com/questions/5072136/javascript-filter-for-objects/37616104
+    Object.filter = (obj, predicate) =>
+        Object.keys(obj)
+            .filter(key => predicate(obj[key]))
+            .reduce((res, key) => (res[key] = obj[key], res), {});
+
+    function editTeamNumbers() {
+        editingTeamNumbers = true
+    }
 
     function wsConnect() {
         ws = new WebSocket(wsServer)
@@ -39,6 +51,9 @@
             matchState = JSON.parse(event.data)
             if (matchState["state"] === "Idle") {
                 banner = "Ready to start match"
+                if (!editingTeamNumbers) {
+                    allianceMap = Object.filter(matchState["alliances"], x => (x && x !== 0))
+                }
             } else { // Match running
                 banner = "Running: " + matchState["state"]
             }
@@ -66,7 +81,7 @@
         if (confirm(`Confirm E-STOP ${teamNumber} (${allianceStation})?`)) {
             ws.send(JSON.stringify({
                 message: "estop",
-                arg: teamNumber
+                alliance_station: allianceStation
             }))
             alert("E-stopped " + teamNumber)
         } else {
@@ -77,13 +92,23 @@
     function startMatch() {
         ws.send(JSON.stringify({
             message: "start"
-        }));
+        }))
     }
 
     function stopMatch() {
         ws.send(JSON.stringify({
             message: "stop"
-        }));
+        }))
+    }
+
+    function updateAlliances() {
+        allianceMap = Object.filter(allianceMap, x => (x && x !== 0))
+
+        ws.send(JSON.stringify({
+            message: "update_alliances",
+            alliances: allianceMap
+        }))
+        editingTeamNumbers = false
     }
 
     onMount(() => {
@@ -98,33 +123,26 @@
 </script>
 
 <main>
-    <div>
-        <h1>BunnyFMS</h1>
-        <p class="fms-dot">
-            FMS <span
-                class="dot"
-                style="background-color: {wsConnected ? 'green' : 'red'}"></span>
-        </p>
-    </div>
-
-    <h2>{banner}</h2>
-
-    <MatchStepper
-            autoTimer={matchState["auto_timer"]}
-            endgameTimer={matchState["endgame_timer"]}
-            state={matchState["state"]}
-            teleopTimer={matchState["teleop_timer"]}
-    />
+    <h1>BunnyFMS</h1>
 
     <div class="field">
         <div class="alliance">
-            {#each ["R1", "R2", "R3"] as allianceStation}
-                <FieldTeam {estop} disabled={!matchState['state'] || matchState['state'] === "Idle"} allianceStation={allianceStation} teamNumber="0000"/>
-            {/each}
+            <FieldTeam allianceStation="R1" bind:teamNumber={allianceMap["R1"]} {editTeamNumbers} {estop} matchIdle={!matchState['state'] || matchState['state'] === "Idle"} {updateAlliances}/>
+            <FieldTeam allianceStation="R2" bind:teamNumber={allianceMap["R2"]} {editTeamNumbers} {estop} matchIdle={!matchState['state'] || matchState['state'] === "Idle"} {updateAlliances}/>
+            <FieldTeam allianceStation="R3" bind:teamNumber={allianceMap["R3"]} {editTeamNumbers} {estop} matchIdle={!matchState['state'] || matchState['state'] === "Idle"} {updateAlliances}/>
         </div>
 
-        <div class="match-controls">
-            {#if matchState && matchState['state']}
+        <div class="match-center">
+            <h2>{banner}</h2>
+
+            {#if matchState['state']}
+                <h2 style="margin-bottom: 0">{matchState["current_timer"]}</h2>
+                <div class="match-timers">
+                    <p>Auto: {matchState["auto_timer"]}</p>
+                    <p>Teleop: {matchState["teleop_timer"]}</p>
+                    <p>Endgame: {matchState["endgame_timer"]}</p>
+                </div>
+
                 {#if matchState['state'] === "Idle"}
                     <button on:click={() => startMatch()}>Start Match</button>
                 {:else}
@@ -134,13 +152,19 @@
         </div>
 
         <div class="alliance text-align-right">
-            {#each ["B1", "B2", "B3"] as allianceStation}
-                <FieldTeam {estop} disabled={!matchState['state'] || matchState['state'] === "Idle"} allianceStation={allianceStation} teamNumber="0000"/>
-            {/each}
+            <FieldTeam allianceStation="B1" bind:teamNumber={allianceMap["B1"]} {editTeamNumbers} {estop} matchIdle={!matchState['state'] || matchState['state'] === "Idle"} {updateAlliances}/>
+            <FieldTeam allianceStation="B2" bind:teamNumber={allianceMap["B2"]} {editTeamNumbers} {estop} matchIdle={!matchState['state'] || matchState['state'] === "Idle"} {updateAlliances}/>
+            <FieldTeam allianceStation="B3" bind:teamNumber={allianceMap["B3"]} {editTeamNumbers} {estop} matchIdle={!matchState['state'] || matchState['state'] === "Idle"} {updateAlliances}/>
         </div>
     </div>
 
-    <p on:click={() => {hideFTATools = !hideFTATools}}>FTA Tools ▼</p>
+    <div class="footer">
+        <p on:click={() => {hideFTATools = !hideFTATools}}>FTA Tools ▼</p>
+        <p class="fms-dot">
+            FMS:
+            <Dot state={wsConnected}/>
+        </p>
+    </div>
     {#if !hideFTATools}
         <div class="hidden" id="fta-tools">
             <p>WS latency: {latency} ms</p>
@@ -152,13 +176,6 @@
 </main>
 
 <style>
-    .dot {
-        height: 12px;
-        width: 12px;
-        border-radius: 50%;
-        display: inline-block;
-    }
-
     h2 {
         display: flex;
         justify-content: center;
@@ -196,10 +213,35 @@
         text-align: right;
     }
 
-    .match-controls {
+    .match-center {
         display: flex;
         flex-direction: column;
         align-items: center;
         justify-content: center;
+    }
+
+    .match-timers {
+        margin-top: 5px;
+        margin-bottom: 14px;
+        display: flex;
+        align-items: center;
+        flex-direction: column;
+    }
+
+    .match-timers p {
+        margin-top: 2px;
+        margin-bottom: 2px;
+    }
+
+    .footer {
+        display: flex;
+        flex-direction: row;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .footer p {
+        margin: 0;
+        padding: 0;
     }
 </style>

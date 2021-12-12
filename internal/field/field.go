@@ -12,6 +12,11 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+type AllianceStation struct {
+	Position string // R1, B1, etc
+	Team     int    // Team number
+}
+
 var (
 	autoDuration    time.Duration
 	teleopDuration  time.Duration
@@ -20,6 +25,8 @@ var (
 	autoStartedAt    time.Time
 	teleopStartedAt  time.Time
 	endgameStartedAt time.Time
+
+	AllianceStations map[string]*AllianceStation
 )
 
 var matchState string
@@ -85,27 +92,36 @@ func formatDuration(d time.Duration) string {
 		return "-"
 	}
 	return fmt.Sprintf("%+v", d.Round(time.Second))
+	// TODO: Format as 0:00
 }
 
 // State gets the game state
 func State() map[string]interface{} {
 	now := time.Now()
 
+	o := map[string]interface{}{
+		"state":     matchState,
+		"alliances": TeamNumbers(),
+	}
+
 	if matchState == "Idle" {
-		return map[string]interface{}{
-			"state":         matchState,
-			"auto_timer":    formatDuration(autoDuration),
-			"teleop_timer":  formatDuration(teleopDuration),
-			"endgame_timer": formatDuration(endgameDuration),
-		}
+		o["auto_timer"] = formatDuration(autoDuration)
+		o["teleop_timer"] = formatDuration(teleopDuration)
+		o["endgame_timer"] = formatDuration(endgameDuration)
+		o["current_timer"] = "0:00"
 	} else {
-		return map[string]interface{}{
-			"state":         matchState,
-			"auto_timer":    formatDuration(autoDuration - now.Sub(autoStartedAt)),
-			"teleop_timer":  formatDuration(teleopDuration - now.Sub(teleopStartedAt)),
-			"endgame_timer": formatDuration(endgameDuration - now.Sub(endgameStartedAt)),
+		o["auto_timer"] = formatDuration(autoDuration - now.Sub(autoStartedAt))
+		o["teleop_timer"] = formatDuration(teleopDuration - now.Sub(teleopStartedAt))
+		o["endgame_timer"] = formatDuration(endgameDuration - now.Sub(endgameStartedAt))
+
+		if matchState == "Auto" {
+			o["current_timer"] = formatDuration(autoDuration - now.Sub(autoStartedAt))
+		} else {
+			o["current_timer"] = formatDuration(teleopDuration - now.Sub(teleopStartedAt))
 		}
 	}
+
+	return o
 }
 
 // Start starts a match
@@ -136,4 +152,28 @@ func PlayAllSounds() {
 	playSound("teleop.mp3")
 	playSound("end.mp3")
 	playSound("abort.mp3")
+}
+
+// UpdateTeamNumbers updates all alliance station team numbers
+func UpdateTeamNumbers(alliances map[string]int) {
+	if AllianceStations == nil {
+		AllianceStations = map[string]*AllianceStation{}
+	}
+
+	for position, team := range alliances {
+		if AllianceStations[position] == nil {
+			AllianceStations[position] = &AllianceStation{Team: team}
+		} else {
+			AllianceStations[position].Team = team
+		}
+	}
+}
+
+// TeamNumbers gets a map of alliance station position to team number
+func TeamNumbers() map[string]int {
+	var o = make(map[string]int, len(AllianceStations))
+	for position, allianceStation := range AllianceStations {
+		o[position] = allianceStation.Team
+	}
+	return o
 }
