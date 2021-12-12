@@ -44,10 +44,10 @@ func register() {
 				// TODO
 			case "ds_reconnect":
 				log.Debug("Reconnecting to driver stations")
-				driverstation.Reset()
+				driverstation.ResetComms()
 			case "estop":
 				log.Debugf("Estopping %s", msg.AllianceStation)
-				// TODO
+				driverstation.Estop(msg.AllianceStation)
 			case "test_sounds":
 				log.Debug("Playing all sounds")
 				field.PlayAllSounds()

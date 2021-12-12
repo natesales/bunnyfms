@@ -1,5 +1,4 @@
 <script>
-    import {onMount} from "svelte";
     import Dot from "./Dot.svelte";
 
     export let matchState;
@@ -8,10 +7,10 @@
 
     let isBlueAlliance = false;
     let matchIdle = true;
-    onMount(() => {
+    $:{
         isBlueAlliance = allianceStation.startsWith('B');
         matchIdle = !matchState['state'] || matchState['state'] === "Idle";
-    })
+    }
 </script>
 
 <main>
@@ -27,11 +26,17 @@
 
     <p>
         {#if matchState["ds"] && matchState["ds"][allianceStation]}
-            DS: <Dot state={matchState["ds"][allianceStation]["ds_link"]}/> (last packet {matchState["ds"][allianceStation]["last_packet"]})
+            DS:
+            <Dot state={matchState["ds"][allianceStation]["ds_link"]}/>
+            (last packet {matchState["ds"][allianceStation]["last_packet"]})
             <br>
-            Robot: <Dot state={matchState["ds"][allianceStation]["robot_link"]}/> (last link {matchState["ds"][allianceStation]["last_robot_link"]})
+            Robot:
+            <Dot state={matchState["ds"][allianceStation]["robot_link"]}/>
+            (last link {matchState["ds"][allianceStation]["last_robot_link"]})
             <br>
-            Robot: <Dot state={matchState["ds"][allianceStation]["radio_link"]}/> ({matchState["ds"][allianceStation]["battery_voltage"]}v)
+            Robot:
+            <Dot state={matchState["ds"][allianceStation]["radio_link"]}/>
+            ({matchState["ds"][allianceStation]["battery_voltage"]}v) <span style="color: red; font-weight: bold">{matchState["ds"][allianceStation]["estop"] ? "E-STOPPED" : ""}</span>
             <br>
         {/if}
     </p>

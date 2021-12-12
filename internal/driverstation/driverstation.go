@@ -26,8 +26,7 @@ var (
 )
 
 type AllianceStation struct {
-	Team   int  // Team number
-	Estop  bool // Should the robot be e-stopped?
+	Team   int // Team number
 	DsConn *Conn
 }
 
@@ -408,8 +407,7 @@ func sendDsPacket(matchNumber int, auto bool, enabled bool) {
 		dsConn := allianceStation.DsConn
 		if dsConn != nil {
 			dsConn.Auto = auto
-			dsConn.Enabled = enabled && !allianceStation.Estop
-			dsConn.Estop = allianceStation.Estop
+			dsConn.Enabled = enabled && !dsConn.Estop
 			err := dsConn.update(matchNumber)
 			if err != nil {
 				log.Printf("Unable to send driver station packet for team %d", allianceStation.DsConn.TeamId)
@@ -418,8 +416,8 @@ func sendDsPacket(matchNumber int, auto bool, enabled bool) {
 	}
 }
 
-// Start starts drive station communication
-func Start() {
+// StartComms starts drive station communication
+func StartComms() {
 	if AllianceStations == nil {
 		AllianceStations = map[string]*AllianceStation{}
 	}
@@ -461,20 +459,20 @@ func Start() {
 	}()
 }
 
-// Stop stops drive station communication
-func Stop() {
+// StopComms stops drive station communication
+func StopComms() {
 	log.Print("Stopping driver station communication")
 	commsQuit <- true
 	tcpListener.Close()
 	udpConn.Close()
 }
 
-// Reset forces all DS to connect
-func Reset() {
+// ResetComms forces all DS to connect
+func ResetComms() {
 	log.Debug("Resetting driver station communication")
-	Stop()
+	StopComms()
 	time.Sleep(5 * time.Second)
-	Start()
+	StartComms()
 }
 
 // CloseAll closes all connections
@@ -494,6 +492,7 @@ type DSStats struct {
 	DSLink         bool    `json:"ds_link"`
 	RobotLink      bool    `json:"robot_link"`
 	RadioLink      bool    `json:"radio_link"`
+	Estop          bool    `json:"estop"`
 }
 
 func roundTime(t time.Time) string {
@@ -519,10 +518,51 @@ func ConnectionStats() map[string]*DSStats {
 					DSLink:         allianceStation.DsConn.DsLinked,
 					RobotLink:      allianceStation.DsConn.RobotLinked,
 					RadioLink:      allianceStation.DsConn.RadioLinked,
+					Estop:          allianceStation.DsConn.Estop,
 				}
 			}
 		}
 	}
 
 	return o
+}
+
+// StartAuto starts autonomous
+func StartAuto() {
+	for _, allianceStation := range AllianceStations {
+		if allianceStation.DsConn != nil {
+			allianceStation.DsConn.Auto = true
+			allianceStation.DsConn.Enabled = true
+		}
+	}
+}
+
+// StartTeleop starts teleop
+func StartTeleop() {
+	for _, allianceStation := range AllianceStations {
+		if allianceStation.DsConn != nil {
+			allianceStation.DsConn.Auto = false
+			allianceStation.DsConn.Enabled = true
+		}
+	}
+}
+
+// StopMatch stops the match
+func StopMatch() {
+	for _, allianceStation := range AllianceStations {
+		if allianceStation.DsConn != nil {
+			allianceStation.DsConn.Enabled = false
+			allianceStation.DsConn.Estop = false
+		}
+	}
+}
+
+// Estop estops an alliance member
+func Estop(alliance string) {
+	if AllianceStations != nil && AllianceStations[alliance] != nil {
+		dsConn := AllianceStations[alliance].DsConn
+		if dsConn != nil {
+			dsConn.Estop = true
+		}
+	}
 }

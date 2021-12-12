@@ -26,7 +26,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	driverstation.Start()
+	driverstation.StartComms()
 
 	log.Printf("Starting HTTP server on %s", *listenAddr)
 	api.Serve(*listenAddr)

@@ -125,16 +125,19 @@ func State() map[string]interface{} {
 func Start() {
 	go func() {
 		go playSound("auto.mp3")
+		driverstation.StartAuto()
 		matchState = stateAuto
 		autoStartedAt = time.Now()
 		time.Sleep(autoDuration)
 
 		go playSound("teleop.mp3")
+		driverstation.StartTeleop()
 		matchState = stateTeleop
 		teleopStartedAt = time.Now()
 		time.Sleep(teleopDuration - endgameDuration)
 
 		matchState = stateEndGame
+		driverstation.StopMatch()
 		endgameStartedAt = time.Now()
 		time.Sleep(endgameDuration)
 
