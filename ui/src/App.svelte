@@ -1,12 +1,12 @@
 <script>
-    import Field from "./components/Field.svelte";
     import MatchStepper from "./components/MatchStepper.svelte";
     import {onMount} from "svelte";
-    import {ws} from "./api";
+    import FieldTeam from "./components/FieldTeam.svelte";
 
     // let wsServer = "ws://" + location.host + "/ws";
     let wsServer = "ws://localhost:8080/ws";
 
+    let ws;
     let startTime;
     let hideFTATools = true;
 
@@ -62,6 +62,30 @@
         }))
     }
 
+    function estop(teamNumber, allianceStation) {
+        if (confirm(`Confirm E-STOP ${teamNumber} (${allianceStation})?`)) {
+            ws.send(JSON.stringify({
+                message: "estop",
+                arg: teamNumber
+            }))
+            alert("E-stopped " + teamNumber)
+        } else {
+            alert("E-STOP Cancelled")
+        }
+    }
+
+    function startMatch() {
+        ws.send(JSON.stringify({
+            message: "start"
+        }));
+    }
+
+    function stopMatch() {
+        ws.send(JSON.stringify({
+            message: "stop"
+        }));
+    }
+
     onMount(() => {
         wsConnect()
         setInterval(function () {
@@ -92,7 +116,29 @@
             teleopTimer={matchState["teleop_timer"]}
     />
 
-    <Field {matchState}/>
+    <div class="field">
+        <div class="alliance">
+            {#each ["R1", "R2", "R3"] as allianceStation}
+                <FieldTeam {estop} disabled={!matchState['state'] || matchState['state'] === "Idle"} allianceStation={allianceStation} teamNumber="0000"/>
+            {/each}
+        </div>
+
+        <div class="match-controls">
+            {#if matchState && matchState['state']}
+                {#if matchState['state'] === "Idle"}
+                    <button on:click={() => startMatch()}>Start Match</button>
+                {:else}
+                    <button on:click={() => stopMatch()}>Stop Match</button>
+                {/if}
+            {/if}
+        </div>
+
+        <div class="alliance text-align-right">
+            {#each ["B1", "B2", "B3"] as allianceStation}
+                <FieldTeam {estop} disabled={!matchState['state'] || matchState['state'] === "Idle"} allianceStation={allianceStation} teamNumber="0000"/>
+            {/each}
+        </div>
+    </div>
 
     <p on:click={() => {hideFTATools = !hideFTATools}}>FTA Tools ▼</p>
     {#if !hideFTATools}
@@ -122,5 +168,38 @@
     .fms-dot {
         margin-bottom: 0;
         margin-top: 0;
+    }
+
+    .field {
+        display: flex;
+        justify-content: space-between;
+        border-radius: 5px;
+        padding-left: 25px;
+        padding-right: 25px;
+        padding-bottom: 25px;
+        margin-bottom: 15px;
+    }
+
+    @media (prefers-color-scheme: light) {
+        .field {
+            border: 2px solid black;
+        }
+    }
+
+    @media (prefers-color-scheme: dark) {
+        .field {
+            border: 2px solid white;
+        }
+    }
+
+    .text-align-right {
+        text-align: right;
+    }
+
+    .match-controls {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
     }
 </style>
