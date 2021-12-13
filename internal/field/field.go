@@ -155,6 +155,7 @@ func Start() {
 		<-teleopTimer.C
 
 		log.Infof("Match %s: starting endgame", matchName)
+		go playSound("endgame.mp3")
 		matchState = stateEndGame
 		driverstation.StopMatch()
 		endgameStartedAt = time.Now()
@@ -183,6 +184,7 @@ func Stop() {
 func PlayAllSounds() {
 	playSound("auto.mp3")
 	playSound("teleop.mp3")
+	playSound("endgame.mp3")
 	playSound("end.mp3")
 	playSound("abort.mp3")
 }
