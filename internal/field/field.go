@@ -138,6 +138,7 @@ func State() map[string]interface{} {
 // Start starts a match
 func Start() {
 	go func() {
+		log.Infof("Match %s: starting auto", matchName)
 		go playSound("auto.mp3")
 		driverstation.StartAuto()
 		matchState = stateAuto
@@ -145,6 +146,7 @@ func Start() {
 		autoTimer = time.NewTimer(autoDuration)
 		<-autoTimer.C
 
+		log.Infof("Match %s: starting teleop", matchName)
 		go playSound("teleop.mp3")
 		driverstation.StartTeleop()
 		matchState = stateTeleop
@@ -152,12 +154,14 @@ func Start() {
 		teleopTimer = time.NewTimer(teleopDuration - endgameDuration)
 		<-teleopTimer.C
 
+		log.Infof("Match %s: starting endgame", matchName)
 		matchState = stateEndGame
 		driverstation.StopMatch()
 		endgameStartedAt = time.Now()
 		endgameTimer = time.NewTimer(endgameDuration)
 		<-endgameTimer.C
 
+		log.Infof("Match %s: finished", matchName)
 		go playSound("end.mp3")
 		matchState = stateIdle
 	}()
@@ -165,6 +169,7 @@ func Start() {
 
 // Stop stops a match
 func Stop() {
+	log.Infof("Match %s: aborting", matchName)
 	go playSound("abort.mp3")
 	matchState = "Idle"
 	for _, timer := range []*time.Timer{autoTimer, teleopTimer, endgameTimer} {
@@ -208,11 +213,13 @@ func TeamNumbers() map[string]int {
 
 // UpdateMatchName sets the match name
 func UpdateMatchName(n string) {
+	log.Infof("Updating match name to %s", n)
 	matchName = n
 }
 
 // ResetAlliances clears all alliance stations
 func ResetAlliances() {
+	log.Info("Resetting alliances")
 	driverstation.CloseAll()
 	driverstation.AllianceStations = map[string]*driverstation.AllianceStation{}
 }
