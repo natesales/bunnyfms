@@ -2,7 +2,7 @@ all: clean api admin
 
 clean:
 	rm -f bunnyfms
-	rm -rf static/build/ static/water.css static/admin.html
+	rm -rf static/build/ static/water.css static/admin.html static/index.html
 
 api:
 	go build -o bunnyfms
