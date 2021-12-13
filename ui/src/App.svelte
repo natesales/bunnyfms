@@ -29,6 +29,10 @@
         editingTeamNumbers = true
     }
 
+    function wsSend(o) {
+        ws.send(JSON.stringify(o))
+    }
+
     function wsConnect() {
         ws = new WebSocket(wsServer)
 
@@ -97,9 +101,9 @@
 
     function dsReconnect() {
         if (confirm("Are you sure you want to force a DS reconnect?")) {
-            ws.send(JSON.stringify({
+            wsSend({
                 message: "ds_reconnect"
-            }));
+            })
             alert("Sent DS reconnect")
         } else {
             alert("DS reconnect cancelled")
@@ -108,9 +112,9 @@
 
     function testSounds() {
         if (confirm("Are you sure you want to test game sounds?")) {
-            ws.send(JSON.stringify({
+            wsSend({
                 message: "test_sounds"
-            }))
+            })
             alert("Playing game sounds")
         } else {
             alert("Game sound test cancelled")
@@ -119,9 +123,9 @@
 
     function resetAlliances() {
         if (confirm("Are you sure you want to reset alliances?")) {
-            ws.send(JSON.stringify({
+            wsSend({
                 message: "reset_alliances"
-            }))
+            })
             alert("Alliances reset")
         } else {
             alert("Alliance reset cancelled")
@@ -130,10 +134,10 @@
 
     function estop(teamNumber, allianceStation) {
         if (confirm(`Confirm E-STOP ${teamNumber} (${allianceStation})?`)) {
-            ws.send(JSON.stringify({
+            wsSend({
                 message: "estop",
                 alliance_station: allianceStation
-            }))
+            })
             alert("E-stopped " + teamNumber)
         } else {
             alert("E-STOP Cancelled")
@@ -141,24 +145,24 @@
     }
 
     function startMatch() {
-        ws.send(JSON.stringify({
+        wsSend({
             message: "start"
-        }))
+        })
     }
 
     function stopMatch() {
-        ws.send(JSON.stringify({
+        wsSend({
             message: "stop"
-        }))
+        })
     }
 
     function updateAlliances() {
         allianceMap = Object.filter(allianceMap, x => (x && x !== 0))
 
-        ws.send(JSON.stringify({
+        wsSend({
             message: "update_alliances",
             alliances: allianceMap
-        }))
+        })
         editingTeamNumbers = false
     }
 
@@ -166,9 +170,9 @@
         wsConnect()
         setInterval(function () {
             startTime = Date.now();
-            ws.send(JSON.stringify({
+            wsSend({
                 message: "ping"
-            }));
+            })
         }, 1000)
     })
 </script>
@@ -199,10 +203,10 @@
                         bind:value={matchName}
                         on:focus={() => editingMatchName=true}
                         on:blur={() => {
-                            ws.send(JSON.stringify({
+                            wsSend({
                                 message: "match_name",
                                 name: matchName
-                            }))
+                            })
                             editingMatchName=false
                         }}
                 >
