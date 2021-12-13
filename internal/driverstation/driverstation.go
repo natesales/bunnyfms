@@ -279,6 +279,7 @@ func listenForDriverStations() {
 			continue
 		}
 		teamId := int(packet[3])<<8 + int(packet[4])
+		log.Debugf("TCP packet from team %d", teamId)
 
 		// Check if the
 		var assignedStation string
