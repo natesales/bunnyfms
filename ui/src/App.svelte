@@ -18,7 +18,6 @@
     let editingTeamNumbers = false;
     let editingMatchName = false;
     let matchName;
-    let readyToStart = false;
 
     // https://stackoverflow.com/questions/5072136/javascript-filter-for-objects/37616104
     Object.filter = (obj, predicate) =>
@@ -53,8 +52,6 @@
             latency = Date.now() - startTime;
             matchState = JSON.parse(event.data)
             if (matchState["state"] === "Idle") {
-                readyToStart = false;
-
                 // Check if each alliance has at least one team and all configured teams' drive stations have connected
                 let hasRed = false;
                 let hasBlue = false;
@@ -84,7 +81,6 @@
                     banner = "Please set a match name"
                 } else {
                     banner = "Ready to start match"
-                    readyToStart = true
                 }
 
                 if (!editingTeamNumbers) {
@@ -218,7 +214,7 @@
                 </div>
 
                 {#if matchState['state'] === "Idle"}
-                    <button disabled={!readyToStart} on:click={() => startMatch()}>Start Match</button>
+                    <button on:click={() => startMatch()}>Start Match</button>
                 {:else}
                     <button on:click={() => stopMatch()}>Stop Match</button>
                 {/if}
