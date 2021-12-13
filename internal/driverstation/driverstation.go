@@ -65,11 +65,11 @@ func newConn(teamId int, allianceStation string, tcpConn net.Conn) (*Conn, error
 	}
 	log.Printf("Driver station for Team %d connected from %s\n", teamId, ipAddress)
 
-	udpConn, err := net.Dial("udp4", fmt.Sprintf("%s:%d", ipAddress, driverStationUdpSendPort))
+	dsUdpConn, err := net.Dial("udp4", fmt.Sprintf("%s:%d", ipAddress, driverStationUdpSendPort))
 	if err != nil {
 		return nil, err
 	}
-	return &Conn{TeamId: teamId, AllianceStation: allianceStation, tcpConn: tcpConn, udpConn: udpConn}, nil
+	return &Conn{TeamId: teamId, AllianceStation: allianceStation, tcpConn: tcpConn, udpConn: dsUdpConn}, nil
 }
 
 // Loops indefinitely to read packets and update connection status.
@@ -508,22 +508,19 @@ func roundTime(t time.Time) string {
 func ConnectionStats() map[string]*DSStats {
 	o := map[string]*DSStats{}
 
-	if AllianceStations != nil {
-		for position, allianceStation := range AllianceStations {
-			if allianceStation.DsConn != nil {
-				o[position] = &DSStats{
-					LastPacket:     roundTime(allianceStation.DsConn.lastPacketTime),
-					LastRobotLink:  roundTime(allianceStation.DsConn.lastRobotLinkedTime),
-					BatteryVoltage: allianceStation.DsConn.BatteryVoltage,
-					DSLink:         allianceStation.DsConn.DsLinked,
-					RobotLink:      allianceStation.DsConn.RobotLinked,
-					RadioLink:      allianceStation.DsConn.RadioLinked,
-					Estop:          allianceStation.DsConn.Estop,
-				}
+	for position, allianceStation := range AllianceStations {
+		if allianceStation.DsConn != nil {
+			o[position] = &DSStats{
+				LastPacket:     roundTime(allianceStation.DsConn.lastPacketTime),
+				LastRobotLink:  roundTime(allianceStation.DsConn.lastRobotLinkedTime),
+				BatteryVoltage: allianceStation.DsConn.BatteryVoltage,
+				DSLink:         allianceStation.DsConn.DsLinked,
+				RobotLink:      allianceStation.DsConn.RobotLinked,
+				RadioLink:      allianceStation.DsConn.RadioLinked,
+				Estop:          allianceStation.DsConn.Estop,
 			}
 		}
 	}
-
 	return o
 }
 
