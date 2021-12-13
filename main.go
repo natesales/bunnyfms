@@ -11,13 +11,14 @@ import (
 )
 
 var (
-	listenAddr      = flag.String("listen", ":8080", "HTTP listen address")
-	autoDuration    = flag.String("auto-duration", "10s", "Auto duration")
-	teleOpDuration  = flag.String("teleop-duration", "2m20s", "Telop duration")
-	endgameDuration = flag.String("endgame-duration", "10s", "Endgame duration")
-	eventName       = flag.String("event-name", "Offseason Event", "Event name")
-	noDriveStations = flag.Bool("no-ds", false, "Disable drive station communication")
-	noSounds        = flag.Bool("no-sounds", false, "Disable game sounds")
+	adminListenAddr  = flag.String("admin", ":8080", "Admin listen address")
+	viewerListenAddr = flag.String("viewer", ":8081", "Viewer listen address")
+	autoDuration     = flag.String("auto-duration", "10s", "Auto duration")
+	teleOpDuration   = flag.String("teleop-duration", "2m20s", "Telop duration")
+	endgameDuration  = flag.String("endgame-duration", "10s", "Endgame duration")
+	eventName        = flag.String("event-name", "Offseason Event", "Event name")
+	noDriveStations  = flag.Bool("no-ds", false, "Disable drive station communication")
+	noSounds         = flag.Bool("no-sounds", false, "Disable game sounds")
 )
 
 func main() {
@@ -34,6 +35,5 @@ func main() {
 		log.Warn("-no-ds flag set, not enabling driver station communication")
 	}
 
-	log.Printf("Starting HTTP server on %s", *listenAddr)
-	api.Serve(*listenAddr)
+	api.Serve(*adminListenAddr, *viewerListenAddr)
 }

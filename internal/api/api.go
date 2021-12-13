@@ -9,7 +9,10 @@ import (
 	"github.com/natesales/bunnyfms/internal/field"
 )
 
-var app *fiber.App
+var (
+	appAdmin  *fiber.App
+	appViewer *fiber.App
+)
 
 type message struct {
 	Message         string         `json:"message"`
@@ -18,11 +21,11 @@ type message struct {
 	Name            string         `json:"name"`
 }
 
-func register() {
-	app = fiber.New(fiber.Config{DisableStartupMessage: true})
-	app.Static("/", "static/")
+func setupAdmin() {
+	appAdmin = fiber.New(fiber.Config{DisableStartupMessage: true})
+	appAdmin.Static("/", "static/")
 
-	app.Get("/ws", websocket.New(func(c *websocket.Conn) {
+	appAdmin.Get("/ws", websocket.New(func(c *websocket.Conn) {
 		for {
 			var msg message
 			if err := c.ReadJSON(&msg); err != nil {
@@ -64,10 +67,41 @@ func register() {
 	}))
 }
 
+func setupViewer() {
+	appViewer = fiber.New(fiber.Config{DisableStartupMessage: true})
+
+	appViewer.Get("/", func(c *fiber.Ctx) error {
+		return c.SendFile("static/viewer.html")
+	})
+
+	appViewer.Get("/ws", websocket.New(func(c *websocket.Conn) {
+		for {
+			var msg message
+			if err := c.ReadJSON(&msg); err != nil {
+				log.Println("read:", err)
+				break
+			}
+			if err := c.WriteJSON(field.State()); err != nil {
+				log.Println("write:", err)
+			}
+		}
+	}))
+}
+
 // Serve starts the API server
-func Serve(listenAddr string) {
-	if app == nil {
-		register()
+func Serve(adminListen, viewerListen string) {
+	if appAdmin == nil {
+		setupAdmin()
 	}
-	log.Fatal(app.Listen(listenAddr))
+	if appViewer == nil {
+		setupViewer()
+	}
+
+	go func() {
+		log.Printf("Starting viewer HTTP server on %s", viewerListen)
+		log.Fatal(appViewer.Listen(viewerListen))
+	}()
+
+	log.Printf("Starting admin HTTP server on %s", adminListen)
+	log.Fatal(appAdmin.Listen(adminListen))
 }

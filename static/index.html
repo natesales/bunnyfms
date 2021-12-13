@@ -1,94 +1,18 @@
+<!DOCTYPE html>
 <html lang="en">
-<title>BunnyFMS | Stream</title>
-<style>
-    html, body {
-        font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', 'Segoe UI Emoji', 'Apple Color Emoji', 'Noto Color Emoji', sans-serif;
-        flex-direction: row;
-        background-color: black;
-        color: white;
-        height: 100vh;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 150%;
-    }
+<head>
+	<meta charset='utf-8'>
+	<meta name='viewport' content='width=device-width,initial-scale=1'>
 
-    h1, h2 {
-        margin: 0 25px;
-    }
+	<title>BunnyFMS | Admin</title>
 
-    .column {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-    }
-</style>
+	<link href="water.css" rel="stylesheet">
+	<link rel='icon' type='image/png' href='/favicon.png'>
+	<link rel='stylesheet' href='/build/bundle.css'>
+
+	<script defer src='/build/bundle.js'></script>
+</head>
 
 <body>
-
-<div class="column">
-    <span id="R1">-</span>
-    <span id="R2">-</span>
-    <span id="R3">-</span>
-</div>
-
-<div class="column">
-    <h2 id="name"></h2>
-    <h1 id="timer"></h1>
-    <h2 id="state"></h2>
-</div>
-
-<div class="column">
-    <span id="B1">-</span>
-    <span id="B2">-</span>
-    <span id="B3">-</span>
-</div>
 </body>
-
-<script>
-    let ws;
-
-    function wsConnect() {
-        ws = new WebSocket("ws://" + location.host + "/ws")
-
-        ws.onopen = () => {
-            console.log("opened websocket")
-        }
-        ws.onclose = () => {
-            console.log("closed websocket")
-            setTimeout(function () {
-                wsConnect()
-            }, 1000)
-        }
-        ws.onerror = (e) => {
-            console.log(e)
-            ws.close()
-        }
-        ws.onmessage = (event) => {
-            matchState = JSON.parse(event.data)
-            document.getElementById("name").innerText = matchState["name"]
-            document.getElementById("timer").innerText = matchState["current_timer"]
-
-            if (matchState["state"] === "Idle") {
-                document.getElementById("state").style.display = "none"
-            } else {
-                document.getElementById("state").style.display = "block"
-                document.getElementById("state").innerText = matchState["state"]
-            }
-
-            for (let position in matchState["alliances"]) {
-                document.getElementById(position).innerText = matchState["alliances"][position]
-            }
-        }
-    }
-
-    window.addEventListener('DOMContentLoaded', () => {
-        wsConnect()
-        setInterval(function () {
-            ws.send(JSON.stringify({
-                message: "ping"
-            }));
-        }, 1000)
-    })
-</script>
 </html>

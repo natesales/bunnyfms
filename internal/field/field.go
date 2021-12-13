@@ -57,6 +57,7 @@ func playSound(file string) {
 		log.Warn(err)
 	}
 
+	// TODO: This panics if sound is already going
 	c, err := oto.NewContext(d.SampleRate(), 2, 2, 8192)
 	if err != nil {
 		log.Warn(err)
