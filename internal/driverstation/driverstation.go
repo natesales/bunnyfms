@@ -508,7 +508,6 @@ func ConnectionStats() map[string]*DSStats {
 	o := map[string]*DSStats{}
 
 	if AllianceStations != nil {
-		log.Infof("%d alliance stations", len(AllianceStations))
 		for position, allianceStation := range AllianceStations {
 			if allianceStation.DsConn != nil {
 				o[position] = &DSStats{

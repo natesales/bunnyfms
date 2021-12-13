@@ -18,6 +18,10 @@ var (
 	teleopDuration  time.Duration
 	endgameDuration time.Duration
 
+	autoTimer    *time.Timer
+	teleopTimer  *time.Timer
+	endgameTimer *time.Timer
+
 	autoStartedAt    time.Time
 	teleopStartedAt  time.Time
 	endgameStartedAt time.Time
@@ -139,22 +143,36 @@ func Start() {
 		driverstation.StartAuto()
 		matchState = stateAuto
 		autoStartedAt = time.Now()
-		time.Sleep(autoDuration)
+		autoTimer = time.NewTimer(autoDuration)
+		<-autoTimer.C
 
 		go playSound("teleop.mp3")
 		driverstation.StartTeleop()
 		matchState = stateTeleop
 		teleopStartedAt = time.Now()
-		time.Sleep(teleopDuration - endgameDuration)
+		teleopTimer = time.NewTimer(teleopDuration - endgameDuration)
+		<-teleopTimer.C
 
 		matchState = stateEndGame
 		driverstation.StopMatch()
 		endgameStartedAt = time.Now()
-		time.Sleep(endgameDuration)
+		endgameTimer = time.NewTimer(endgameDuration)
+		<-endgameTimer.C
 
 		go playSound("end.mp3")
 		matchState = stateIdle
 	}()
+}
+
+// Stop stops a match
+func Stop() {
+	go playSound("abort.mp3")
+	matchState = "Idle"
+	for _, timer := range []*time.Timer{autoTimer, teleopTimer, endgameTimer} {
+		if timer != nil {
+			timer.Stop()
+		}
+	}
 }
 
 // PlayAllSounds plays all game sounds to test audio levels

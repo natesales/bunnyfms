@@ -40,8 +40,7 @@ func register() {
 				field.Start()
 			case "stop":
 				log.Debug("Stopping match")
-				// field.Stop()
-				// TODO
+				field.Stop()
 			case "ds_reconnect":
 				log.Debug("Reconnecting to driver stations")
 				driverstation.ResetComms()
