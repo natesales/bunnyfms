@@ -1,5 +1,9 @@
 all: clean api admin
 
+dep:
+	sudo apt install libasound2-dev
+	cd ui && npm i
+
 clean:
 	rm -f bunnyfms
 	rm -rf static/build/ static/water.css static/admin.html static/index.html
