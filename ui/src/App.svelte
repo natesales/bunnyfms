@@ -180,9 +180,6 @@
 <main>
     <div class="space-between">
         <h2>BunnyFMS</h2>
-        {#if matchState["event_name"]}
-            <h2>{matchState["event_name"]}</h2>
-        {/if}
     </div>
     <div class="field">
         <div class="alliance">

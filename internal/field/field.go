@@ -28,8 +28,8 @@ var (
 )
 
 var (
-	gameSounds                       bool
-	matchState, matchName, eventName string
+	gameSounds            bool
+	matchState, matchName string
 )
 
 const (
@@ -73,7 +73,7 @@ func playSound(file string) {
 }
 
 // Setup creates a new field setup (once per event)
-func Setup(auto, teleop, endGame, event string, sounds bool) error {
+func Setup(auto, teleop, endGame string, sounds bool) error {
 	// Parse durations
 	var err error
 	autoDuration, err = time.ParseDuration(auto)
@@ -89,11 +89,10 @@ func Setup(auto, teleop, endGame, event string, sounds bool) error {
 		return err
 	}
 
-	eventName = event
 	matchState = stateIdle
 	gameSounds = sounds
 
-	log.Infof("Configuring FMS for %s with auto: %s, teleop: %s, endgame: %s, sounds: %v", eventName, autoDuration, teleopDuration, endgameDuration, sounds)
+	log.Infof("Configuring FMS with auto: %s, teleop: %s, endgame: %s, sounds: %v", autoDuration, teleopDuration, endgameDuration, sounds)
 
 	return nil
 }
@@ -110,11 +109,10 @@ func State() map[string]interface{} {
 	now := time.Now()
 
 	o := map[string]interface{}{
-		"name":       matchName,
-		"state":      matchState,
-		"alliances":  TeamNumbers(),
-		"event_name": eventName,
-		"ds":         driverstation.ConnectionStats(),
+		"name":      matchName,
+		"state":     matchState,
+		"alliances": TeamNumbers(),
+		"ds":        driverstation.ConnectionStats(),
 	}
 
 	if matchState == "Idle" {
