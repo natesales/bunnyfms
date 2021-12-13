@@ -29,7 +29,7 @@ The FMS computer needs a connection to the field network and optionally an audio
 3. FMS computer
     1. Static IP address: `10.0.100.5/8`
     2. Default gateway and DNS if required: `10.0.100.1`
-    4. Run (`bunnyfms -admin :8080 -viewer :8081 -auto-duration 10s -teleop-duration 2m20s -endgame-duration 30s`)
+    4. Run (`bunnyfms -admin localhost:8080 -viewer :8081 -auto-duration 10s -teleop-duration 2m20s -endgame-duration 30s`)
 
 4. Robot radio kiosk
     1. Install the [FRC Radio Configuration Utility](https://docs.wpilib.org/en/stable/docs/zero-to-robot/step-3/radio-programming.html)
