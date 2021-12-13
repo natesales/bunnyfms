@@ -14,7 +14,7 @@ var (
 	adminListenAddr  = flag.String("admin", ":8080", "Admin listen address")
 	viewerListenAddr = flag.String("viewer", ":8081", "Viewer listen address")
 	autoDuration     = flag.String("auto-duration", "10s", "Auto duration")
-	teleOpDuration   = flag.String("teleop-duration", "2m20s", "Telop duration")
+	teleOpDuration   = flag.String("teleop-duration", "2m20s", "Teleop duration")
 	endgameDuration  = flag.String("endgame-duration", "10s", "Endgame duration")
 	eventName        = flag.String("event-name", "Offseason Event", "Event name")
 	noDriveStations  = flag.Bool("no-ds", false, "Disable drive station communication")
