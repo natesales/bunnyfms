@@ -2,6 +2,7 @@ package driverstation
 
 import (
 	"fmt"
+	"math"
 	"net"
 	"time"
 
@@ -399,7 +400,7 @@ func (dsConn *Conn) handleTcpConnection() {
 //	return nil
 //}
 
-func sendDsPacket(matchNumber int, auto bool, enabled bool) {
+func sendDsPacket(matchNumber int) {
 	for _, allianceStation := range AllianceStations {
 		if allianceStation.DsConn == nil {
 			continue // DS hasn't been picked up by the FMS yet
@@ -407,8 +408,6 @@ func sendDsPacket(matchNumber int, auto bool, enabled bool) {
 		log.Printf("Sending to %d", allianceStation.DsConn.TeamId)
 		dsConn := allianceStation.DsConn
 		if dsConn != nil {
-			dsConn.Auto = auto
-			dsConn.Enabled = enabled && !dsConn.Estop
 			err := dsConn.update(matchNumber)
 			if err != nil {
 				log.Printf("Unable to send driver station packet for team %d", allianceStation.DsConn.TeamId)
@@ -432,7 +431,7 @@ func StartComms() {
 				return
 			case <-dsPacketTicker.C:
 				log.Debug("DS packet tick")
-				sendDsPacket(1000, true, true)
+				sendDsPacket(1000)
 			}
 		}
 	}()
@@ -513,7 +512,7 @@ func ConnectionStats() map[string]*DSStats {
 			o[position] = &DSStats{
 				LastPacket:     roundTime(allianceStation.DsConn.lastPacketTime),
 				LastRobotLink:  roundTime(allianceStation.DsConn.lastRobotLinkedTime),
-				BatteryVoltage: allianceStation.DsConn.BatteryVoltage,
+				BatteryVoltage: math.Ceil(allianceStation.DsConn.BatteryVoltage*100) / 100,
 				DSLink:         allianceStation.DsConn.DsLinked,
 				RobotLink:      allianceStation.DsConn.RobotLinked,
 				RadioLink:      allianceStation.DsConn.RadioLinked,
