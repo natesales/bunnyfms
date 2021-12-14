@@ -172,6 +172,7 @@ func Start() {
 func Stop() {
 	log.Infof("Match %s: aborting", matchName)
 	go playSound("abort.mp3")
+	go driverstation.StopMatch()
 	matchState = "Idle"
 	for _, timer := range []*time.Timer{autoTimer, teleopTimer, endgameTimer} {
 		if timer != nil {
